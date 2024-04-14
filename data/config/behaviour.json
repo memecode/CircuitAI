@@ -920,10 +920,12 @@
 	},
 	"energysingu": {
 		"role": ["static", "turtle", "heavy"],
+		"attribute": ["support"],  // build at home
 		"since": 660
 	},
 	"energyfusion": {
 		"role": ["static", "mine", "heavy"],
+		"attribute": ["support"],  // build at home
 		"since": 280
 	},
 	"turretaalaser": {
