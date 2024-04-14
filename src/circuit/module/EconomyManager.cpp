@@ -230,14 +230,6 @@ CEconomyManager::CEconomyManager(CCircuitAI* circuit)
 				}
 			}
 
-			// storage
-			if (cdef.GetDef()->GetStorage(metalRes) >= 1000.f) {
-				storeMDefs.AddDef(&cdef);
-			}
-			if (cdef.GetDef()->GetStorage(energyRes) > 1000.f) {
-				storeEDefs.AddDef(&cdef);
-			}
-
 			// mex
 			// BA: float metalConverts = unitDef->GetMakesResource(metalRes);
 			//     float metalExtracts = unitDef->GetExtractsResource(metalRes);
@@ -277,6 +269,15 @@ CEconomyManager::CEconomyManager(CCircuitAI* circuit)
 					finishedHandler[cdef.GetId()] = energyFinishedHandler;
 					energyDefs.AddDef(&cdef);
 				}
+			}
+
+			// storage
+			// NOTE: have to manually filter spot units, as mex placement rules are re-defined in game and break in-engine validation
+			if ((cdef.GetDef()->GetStorage(metalRes) >= 1000.f) && !cdef.IsMex()) {
+				storeMDefs.AddDef(&cdef);
+			}
+			if ((cdef.GetDef()->GetStorage(energyRes) > 1000.f) && !cdef.GetDef()->IsNeedGeo()) {
+				storeEDefs.AddDef(&cdef);
 			}
 
 			if (customParams.find("isairbase") != customParams.end()) {
@@ -604,7 +605,7 @@ void CEconomyManager::Init()
 		startFactory = CScheduler::GameJob(&CEconomyManager::StartFactoryJob, this, maxTravel);
 		scheduler->RunJobEvery(startFactory, 1, circuit->GetSkirmishAIId() + 0 + 5 * FRAMES_PER_SEC);
 		scheduler->RunJobEvery(CScheduler::GameJob(&CEconomyManager::UpdateStorageTasks, this),
-								interval, circuit->GetSkirmishAIId() + 1 + interval / 2);
+								interval, circuit->GetSkirmishAIId() + 1 + interval / 2 + 30 * FRAMES_PER_SEC);
 
 		scheduler->RunJobEvery(CScheduler::GameJob(&CEconomyManager::UpdateEconomy, this),
 								TEAM_SLOWUPDATE_RATE, circuit->GetSkirmishAIId());
@@ -1280,7 +1281,7 @@ IBuilderTask* CEconomyManager::UpdateEnergyTasks(const AIFloat3& position, CCirc
 	// 4) at production base
 	CSetupManager* setupMgr = circuit->GetSetupManager();
 	AIFloat3 buildPos = -RgtVector;
-	if (bestDef->GetCostM() < 200.0f) {
+	if (!bestDef->IsRoleSupport()) {
 		if (terrainMgr->IsZoneAlly(position)
 			|| ((circuit->GetFactoryManager()->GetFactoryCount() > 0) && (position.SqDistance2D(setupMgr->GetSmallEnergyPos()) < SQUARE(600.f))
 				&& ((unit == nullptr) || !unit->GetCircuitDef()->IsRoleComm())))  // TODO: instead of isComm check isFast
