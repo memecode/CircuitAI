@@ -19,6 +19,12 @@ void AiMain()
 // 		cdef.SetThreatKernel((cdef.costM + cdef.costE * 0.02f) * 0.001f);
 // 	}
 
+	for (Id defId = 1, count = ai.GetDefCount(); defId <= count; ++defId) {
+		CCircuitDef@ cdef = ai.GetCircuitDef(defId);
+		if (cdef.costM >= 200.f && aiEconomyMgr.GetEnergyMake(cdef) > 1.f)
+			cdef.AddAttribute(Unit::Attr::BASE.type);  // Build heavy energy at base
+	}
+
 	// Example of user-assigned custom attributes
 	array<string> names = {Factory::armalab, Factory::coralab, Factory::armavp, Factory::coravp,
 		Factory::armaap, Factory::coraap, Factory::armasy, Factory::corasy};

@@ -54,6 +54,9 @@ TypeMask ONOFF     = aiAttrMasker.GetTypeMask("onoff");
 TypeMask VAMPIRE   = aiAttrMasker.GetTypeMask("vampire");
 TypeMask RARE      = aiAttrMasker.GetTypeMask("rare");
 TypeMask FENCE     = aiAttrMasker.GetTypeMask("fence");
+TypeMask REARM     = aiAttrMasker.GetTypeMask("rearm");
+TypeMask NO_DGUN   = aiAttrMasker.GetTypeMask("no_dgun");
+TypeMask ANTI_STAT = aiAttrMasker.GetTypeMask("anti_stat");
 }  // namespace Attr
 
 enum UseAs {

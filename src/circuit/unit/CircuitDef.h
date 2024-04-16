@@ -169,8 +169,8 @@ public:
 	bool IsAttrSiege()    const { return attr & AttrMask::SIEGE; }
 	bool IsAttrRetHold()  const { return attr & AttrMask::RET_HOLD; }
 	bool IsAttrRetFight() const { return attr & AttrMask::RET_FIGHT; }
-//	bool IsAttrSolo()     const { return attr & AttrMask::SOLO; }  // per-unit
-//	bool IsAttrBase()     const { return attr & AttrMask::BASE; }  // per-unit
+	bool IsAttrSolo()     const { return attr & AttrMask::SOLO; }  // also per-unit
+	bool IsAttrBase()     const { return attr & AttrMask::BASE; }  // also per-unit
 	bool IsAttrDGCost()   const { return attr & AttrMask::DG_COST; }
 	bool IsAttrDGStill()  const { return attr & AttrMask::DG_STILL; }
 	bool IsAttrJump()     const { return attr & AttrMask::JUMP; }

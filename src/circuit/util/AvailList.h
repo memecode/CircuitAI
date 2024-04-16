@@ -51,6 +51,7 @@ public:
 	}
 
 private:
+	std::map<const CCircuitDef*, SAvailInfo> allInfos;  // for external queries
 	std::set<CCircuitDef*> all;
 	std::set<CCircuitDef*> avail;
 	std::vector<SAvailInfo> infos;  // sorted high-score first
@@ -64,21 +65,22 @@ void CAvailList<T, S>::Init(const std::vector<CCircuitDef*>& builders, S func)
 {
 	scoreFunc = func;
 
-	std::vector<SAvailInfo> allInfos;
+	std::vector<SAvailInfo> sortedInfos;
 	for (CCircuitDef* cdef : all) {
 		SAvailInfo info;
 		info.cdef = cdef;
 		info.score = scoreFunc(cdef, info.data);
-		allInfos.push_back(info);
+		sortedInfos.push_back(info);
+		allInfos[cdef] = info;
 	}
 	// High-tech first
 	auto compare = [](const SAvailInfo& e1, const SAvailInfo& e2) {
 		return e1.score > e2.score;
 	};
-	std::sort(allInfos.begin(), allInfos.end(), compare);
+	std::sort(sortedInfos.begin(), sortedInfos.end(), compare);
 
 	for (CCircuitDef const* bdef : builders) {
-		for (const SAvailInfo& info : allInfos) {
+		for (const SAvailInfo& info : sortedInfos) {
 			if (bdef->CanBuild(info.cdef)) {
 				builderInfos[bdef->GetId()].push_back(info.cdef);
 			}
@@ -106,10 +108,7 @@ void CAvailList<T, S>::AddDefs(const std::set<CCircuitDef*>& buildDefs)
 	avail.insert(diffDefs.begin(), diffDefs.end());
 
 	for (CCircuitDef* cdef : diffDefs) {
-		SAvailInfo info;
-		info.cdef = cdef;
-		info.score = scoreFunc(cdef, info.data);
-		infos.push_back(info);
+		infos.push_back(allInfos[cdef]);
 	}
 
 	// High-tech first
@@ -148,8 +147,8 @@ void CAvailList<T, S>::RemoveDefs(const std::set<CCircuitDef*>& buildDefs)
 template <typename T, typename S>
 const T* CAvailList<T, S>::GetAvailInfo(const CCircuitDef* cdef) const
 {
-	auto it = std::find(infos.begin(), infos.end(), cdef);
-	return (it != infos.end()) ? &it->data : nullptr;
+	auto it = allInfos.find(cdef);
+	return (it != allInfos.end()) ? &it->second.data : nullptr;
 }
 
 template <typename T, typename S>

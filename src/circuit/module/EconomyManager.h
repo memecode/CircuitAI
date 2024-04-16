@@ -55,9 +55,9 @@ public:
 	CEconomyManager(CCircuitAI* circuit);
 	virtual ~CEconomyManager();
 
+	void InitEconomyScores();
 private:
 	void ReadConfig(float& outMinEInc);
-	void InitEconomyScores(const std::vector<CCircuitDef*>&& builders);
 	void Init();
 
 public:
@@ -71,6 +71,8 @@ public:
 	CEnergyGrid* GetEnergyGrid() const { return energyGrid; }
 	float GetClusterRange() const { return clusterRange; }
 	float GetPylonRange() const { return pylonRange; }
+	float GetMetalMake(CCircuitDef* cdef) const;  // script
+	float GetEnergyMake(CCircuitDef* cdef) const;  // script
 	CCircuitDef* GetLowEnergy(const springai::AIFloat3& pos, float& outMake, const CCircuitUnit* builder = nullptr) const;
 	void AddEconomyDefs(const std::set<CCircuitDef*>& buildDefs);  // add available economy defs
 	void RemoveEconomyDefs(const std::set<CCircuitDef*>& buildDefs);

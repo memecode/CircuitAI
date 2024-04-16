@@ -208,13 +208,8 @@ CEconomyManager::CEconomyManager(CCircuitAI* circuit)
 
 	float maxAreaDivCost = .0f;
 	const float avgWind = (circuit->GetMap()->GetMaxWind() + circuit->GetMap()->GetMinWind()) * 0.5f;
-	std::vector<CCircuitDef*> builders;
 
 	for (CCircuitDef& cdef : circuit->GetCircuitDefs()) {
-		if (cdef.IsBuilder()) {
-			builders.push_back(&cdef);
-		}
-
 		const std::map<std::string, std::string>& customParams = cdef.GetDef()->GetCustomParams();
 
 		if (!cdef.IsMobile()) {
@@ -301,9 +296,6 @@ CEconomyManager::CEconomyManager(CCircuitAI* circuit)
 			}
 		}
 	}
-
-	// NOTE: Uses values from ReadConfig
-	InitEconomyScores(std::move(builders));
 
 	// FIXME: BA
 	for (SSideInfo& sideInfo : sideInfos) {
@@ -436,8 +428,15 @@ void CEconomyManager::ReadConfig(float& outMinEInc)
 	}
 }
 
-void CEconomyManager::InitEconomyScores(const std::vector<CCircuitDef*>&& builders)
+void CEconomyManager::InitEconomyScores()
 {
+	std::vector<CCircuitDef*> builders;
+	for (CCircuitDef& cdef : circuit->GetCircuitDefs()) {
+		if (cdef.IsBuilder()) {
+			builders.push_back(&cdef);
+		}
+	}
+
 	metalDefs.Init(builders, [this](CCircuitDef* cdef, SMetalExt& data) -> float {
 //		data.speed = cdef->GetExtractsM();
 //		return data.speed * 1e+6f - cdef->GetCostM();
@@ -653,6 +652,25 @@ int CEconomyManager::UnitDestroyed(CCircuitUnit* unit, CEnemyInfo* attacker)
 	}
 
 	return 0; //signaling: OK
+}
+
+float CEconomyManager::GetMetalMake(CCircuitDef* cdef) const
+{
+	if (cdef->IsMex()) {
+		return circuit->GetMetalManager()->GetSpotAvgIncome() * cdef->GetExtractsM();
+	}
+	const SConvertExt* convertExt = convertDefs.GetAvailInfo(cdef);
+	return (convertExt == nullptr) ? 0.f : convertExt->make;
+}
+
+float CEconomyManager::GetEnergyMake(CCircuitDef* cdef) const
+{
+	if (cdef->GetDef()->IsNeedGeo()) {
+		const SGeoExt* geoExt = geoDefs.GetAvailInfo(cdef);
+		return (geoExt == nullptr) ? 0.f : geoExt->make;
+	}
+	const SEnergyExt* energyExt = energyDefs.GetAvailInfo(cdef);
+	return (energyExt == nullptr) ? 0.f : energyExt->make;
 }
 
 CCircuitDef* CEconomyManager::GetLowEnergy(const AIFloat3& pos, float& outMake, const CCircuitUnit* builder) const
@@ -1281,7 +1299,7 @@ IBuilderTask* CEconomyManager::UpdateEnergyTasks(const AIFloat3& position, CCirc
 	// 4) at production base
 	CSetupManager* setupMgr = circuit->GetSetupManager();
 	AIFloat3 buildPos = -RgtVector;
-	if (!bestDef->IsRoleSupport()) {
+	if (!bestDef->IsAttrBase()) {
 		if (terrainMgr->IsZoneAlly(position)
 			|| ((circuit->GetFactoryManager()->GetFactoryCount() > 0) && (position.SqDistance2D(setupMgr->GetSmallEnergyPos()) < SQUARE(600.f))
 				&& ((unit == nullptr) || !unit->GetCircuitDef()->IsRoleComm())))  // TODO: instead of isComm check isFast

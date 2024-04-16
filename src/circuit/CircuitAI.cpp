@@ -622,6 +622,7 @@ int CCircuitAI::Init(int skirmishAIId, const struct SSkirmishAICallback* sAICall
 	modules.push_back(economyManager);  // NOTE: Uses unit's manager != nullptr, thus must be last.
 
 	terrainManager->Init();
+	economyManager->InitEconomyScores();
 
 	script->RegisterMgr();
 	if (!script->Init()) {
