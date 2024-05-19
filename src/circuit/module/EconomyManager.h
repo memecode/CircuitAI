@@ -48,8 +48,6 @@ public:
 		CCircuitDef* mexDef;
 		CCircuitDef* geoDef;
 		CCircuitDef* defaultDef;
-
-		std::unordered_map<CCircuitDef*, SEnergyCond> engyLimits;
 	};
 
 	CEconomyManager(CCircuitAI* circuit);
@@ -170,6 +168,7 @@ private:
 	float pylonLinkInc;
 	CCircuitDef* pylonDef;  // TODO: Move into CEnergyGrid?
 
+	std::unordered_map<CCircuitDef*, SEnergyCond> engyLimits;
 	std::vector<SSideInfo> sideInfos;
 
 	struct SStoreExt {

@@ -365,41 +365,32 @@ void CEconomyManager::ReadConfig(float& outMinEInc)
 	clusterRange = econ.get("cluster_range", 950.f).asFloat();
 	pylonLinkInc = energy.get("link_inc", 16.0f).asFloat();
 
+	std::string type = circuit->GetTerrainManager()->IsWaterMap() ? "water" : "land";
+	const Json::Value& surf = energy[type];
+	for (const std::string& engy : surf.getMemberNames()) {
+		CCircuitDef* cdef = circuit->GetCircuitDef(engy.c_str());
+		if (cdef == nullptr) {
+			circuit->LOG("CONFIG %s: has unknown UnitDef '%s'", cfgName.c_str(), engy.c_str());
+			continue;
+		}
+		const Json::Value& surfEngy = surf[engy];
+		const int min = surfEngy[0].asInt();
+		const int max = surfEngy.get(1, min).asInt();
+		SEnergyCond cond;
+		cond.limit = min + rand() % (max - min + 1);
+		cond.metalIncome = surfEngy.get(2, -1.f).asFloat();
+		cond.energyIncome = surfEngy.get(3, -1.f).asFloat();
+		cond.score = surfEngy.get(4, -1.f).asFloat();
+		engyLimits[cdef] = cond;
+	}
+
 	CMaskHandler& sideMasker = circuit->GetGameAttribute()->GetSideMasker();
 	sideInfos.resize(sideMasker.GetMasks().size());
-	const Json::Value& engySides = energy["side"];
 	const Json::Value& mex = econ["mex"];
 	const Json::Value& geo = econ["geo"];
 	const Json::Value& deflt = econ["default"];
 	for (const auto& kv : sideMasker.GetMasks()) {
 		SSideInfo& sideInfo = sideInfos[kv.second.type];
-		const Json::Value& surfs = engySides[kv.first];
-
-		std::vector<std::pair<std::string, SEnergyCond>> engies;
-		std::string type = circuit->GetTerrainManager()->IsWaterMap() ? "water" : "land";
-		const Json::Value& surf = surfs[type];
-		for (const std::string& engy : surf.getMemberNames()) {
-			const Json::Value& surfEngy = surf[engy];
-			const int min = surfEngy[0].asInt();
-			const int max = surfEngy.get(1, min).asInt();
-			SEnergyCond cond;
-			cond.limit = min + rand() % (max - min + 1);
-			cond.metalIncome = surfEngy.get(2, -1.f).asFloat();
-			cond.energyIncome = surfEngy.get(3, -1.f).asFloat();
-			cond.score = surfEngy.get(4, -1.f).asFloat();
-			engies.push_back(std::make_pair(engy, cond));
-		}
-
-		std::unordered_map<CCircuitDef*, SEnergyCond>& list = sideInfo.engyLimits;
-		for (unsigned i = 0; i < engies.size(); ++i) {
-			const char* name = engies[i].first.c_str();
-			CCircuitDef* cdef = circuit->GetCircuitDef(name);
-			if (cdef == nullptr) {
-				circuit->LOG("CONFIG %s: has unknown UnitDef '%s'", cfgName.c_str(), name);
-				continue;
-			}
-			list[cdef] = engies[i].second;
-		}
 
 		// Mex
 		const char* name = mex[kv.first].asCString();
@@ -467,9 +458,8 @@ void CEconomyManager::InitEconomyScores()
 			}
 		}
 
-		const std::unordered_map<CCircuitDef*, SEnergyCond>& list = GetSideInfo().engyLimits;
-		auto lit = list.find(cdef);
-		if (lit != list.end()) {
+		auto lit = engyLimits.find(cdef);
+		if (lit != engyLimits.end()) {
 			data.cond = lit->second;
 		}
 		if (data.cond.score < .0f) {

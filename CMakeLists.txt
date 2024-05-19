@@ -22,12 +22,12 @@ if    (CIRCUIT_DEBUG)
 		set(additionalLibraries ${additionalLibraries} ${SDL2_LIBRARY})
 	endif ()
 	set(additionalCompileFlags "-DDEBUG_VIS -Wall")
-#	set(additionalCompileFlags "-DDEBUG_VIS -Wall -fsanitize=address -fno-omit-frame-pointer -fno-common -O1 -fno-strict-aliasing")
+	# set(additionalCompileFlags "-DDEBUG_VIS -Wall -fsanitize=address -fno-omit-frame-pointer -fno-common -O1 -fno-strict-aliasing")
 else  (CIRCUIT_DEBUG)
 	set(additionalCompileFlags "-Wall -fno-omit-frame-pointer -O1")
 endif (CIRCUIT_DEBUG)
 
-#set(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} -static-libgcc -static-libstdc++ -lasan")
+# set(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} -static-libgcc -static-libstdc++ -lasan")
 
 
 if    (CIRCUIT_AS_JIT)
