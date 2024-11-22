@@ -171,6 +171,15 @@ private:
 	std::unordered_map<CCircuitDef*, SEnergyCond> engyLimits;
 	std::vector<SSideInfo> sideInfos;
 
+	// FIXME: finished/destroyed handler is still a single function per DefId
+	struct SPurpose {
+		int count;  // economy role usage count
+	};
+	std::unordered_map<CCircuitDef::Id, SPurpose> purposes;
+	void IncPurpose(const CCircuitDef::Id defId);
+	void DecPurpose(const CCircuitDef::Id defId);
+	bool IsNoPurpose(const CCircuitDef::Id defId) const;
+
 	struct SStoreExt {
 		float storage;
 	};
@@ -196,6 +205,7 @@ private:
 	struct SConvertExt {
 		float energyUse;
 		float make;
+		bool isOld;  // clear space, don't build anymore
 	};
 	CAvailList<SConvertExt> convertDefs;
 	void ReclaimOldConvert(const SConvertExt* convertExt);
@@ -209,6 +219,7 @@ private:
 	struct SEnergyExt {
 		float make;
 		SEnergyCond cond;  // condition
+		bool isOld;  // clear space, don't build anymore
 	};
 	CAvailList<SEnergyExt> energyDefs;
 	void ReclaimOldEnergy(const SEnergyExt* energyExt);

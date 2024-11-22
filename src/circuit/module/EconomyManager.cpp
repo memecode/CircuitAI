@@ -222,6 +222,7 @@ CEconomyManager::CEconomyManager(CCircuitAI* circuit)
 					maxAreaDivCost = areaDivCost;
 					pylonDef = &cdef;  // armestor
 					pylonRange = range;
+					// Is it cdef.IncPurpose(); ?
 				}
 			}
 
@@ -240,12 +241,15 @@ CEconomyManager::CEconomyManager(CCircuitAI* circuit)
 				finishedHandler[cdef.GetId()] = mexFinishedHandler;
 				metalDefs.AddDef(&cdef);
 				cdef.SetIsMex(true);
+				IncPurpose(cdef.GetId()); // avoid reclaiming of multi-pyrpose old converter/energy
+				continue;  // NOTE: won't deal with spot requirement if considered as anything else.
 			}
 			if (((it = customParams.find("energyconv_capacity")) != customParams.end()) && (utils::string_to_float(it->second) > 0.f)
 				&& ((it = customParams.find("energyconv_efficiency")) != customParams.end()) && (utils::string_to_float(it->second) > 0.f))
 			{
 				finishedHandler[cdef.GetId()] = convertFinishedHandler;
 				convertDefs.AddDef(&cdef);
+				IncPurpose(cdef.GetId()); // avoid reclaiming of multi-pyrpose old converter/energy
 			}
 
 			// energy
@@ -264,21 +268,25 @@ CEconomyManager::CEconomyManager(CCircuitAI* circuit)
 					finishedHandler[cdef.GetId()] = energyFinishedHandler;
 					energyDefs.AddDef(&cdef);
 				}
+				IncPurpose(cdef.GetId()); // avoid reclaiming of multi-pyrpose old converter/energy
 			}
 
 			// storage
 			// NOTE: have to manually filter spot units, as mex placement rules are re-defined in game and break in-engine validation
-			if ((cdef.GetDef()->GetStorage(metalRes) >= 1000.f) && !cdef.IsMex()) {
+			if ((cdef.GetDef()->GetStorage(metalRes) >= 1000.f)/* && !cdef.IsMex()*/) {
 				storeMDefs.AddDef(&cdef);
+				IncPurpose(cdef.GetId()); // avoid reclaiming of multi-pyrpose old converter/energy
 			}
 			if ((cdef.GetDef()->GetStorage(energyRes) > 1000.f) && !cdef.GetDef()->IsNeedGeo()) {
 				storeEDefs.AddDef(&cdef);
+				IncPurpose(cdef.GetId()); // avoid reclaiming of multi-pyrpose old converter/energy
 			}
 
 			if (customParams.find("isairbase") != customParams.end()) {
 				createdHandler[cdef.GetId()] = airpadCreatedHandler;
 				destroyedHandler[cdef.GetId()] = airpadDestroyedHandler;
 				airpadDefs.AddDef(&cdef);
+				IncPurpose(cdef.GetId()); // avoid reclaiming of multi-pyrpose old converter/energy
 			}
 
 		} else {
@@ -439,6 +447,7 @@ void CEconomyManager::InitEconomyScores()
 		const float ratio = utils::string_to_float(customParams.find("energyconv_efficiency")->second);  // validated on init
 		data.energyUse = utils::string_to_float(customParams.find("energyconv_capacity")->second);  // validated on init
 		data.make = data.energyUse * ratio;
+		data.isOld = false;
 		return data.make;
 	});
 
@@ -476,6 +485,8 @@ void CEconomyManager::InitEconomyScores()
 		if (data.cond.energyIncome < 0.f) {
 			data.cond.energyIncome = cdef->GetCostE() * costRatio;
 		}
+
+		data.isOld = false;
 
 		return data.cond.score;
 	});
@@ -668,7 +679,7 @@ CCircuitDef* CEconomyManager::GetLowEnergy(const AIFloat3& pos, float& outMake, 
 	CTerrainManager* terrainMgr = circuit->GetTerrainManager();
 	const int frame = circuit->GetLastFrame();
 	return energyDefs.GetWorstDef([frame, builder, terrainMgr, &pos, &outMake](CCircuitDef* cdef, const SEnergyExt& data) {
-		if (cdef->IsAvailable(frame)
+		if (!data.isOld && cdef->IsAvailable(frame)
 			&& ((builder == nullptr) || builder->GetCircuitDef()->CanBuild(cdef))
 			&& terrainMgr->CanBeBuiltAtSafe(cdef, pos))
 		{
@@ -1084,7 +1095,7 @@ IBuilderTask* CEconomyManager::UpdateMetalTasks(const AIFloat3& position, CCircu
 	{
 		const AIFloat3& pos = circuit->GetSetupManager()->GetMetalBase();
 		CCircuitDef* convertDef = convertDefs.GetBestDef([frame, terrainMgr, &pos](CCircuitDef* cdef, const SConvertExt& data) {
-			return cdef->IsAvailable(frame) && terrainMgr->CanBeBuiltAt(cdef, pos);
+			return !data.isOld && cdef->IsAvailable(frame) && terrainMgr->CanBeBuiltAt(cdef, pos);
 		});
 		if (convertDef != nullptr) {
 			// NOTE: Next check may prevent converters even when open mex-spot is far
@@ -1236,7 +1247,7 @@ IBuilderTask* CEconomyManager::UpdateEnergyTasks(const AIFloat3& position, CCirc
 
 	for (unsigned i = 0; i < infos.size(); ++i) {  // sorted by high-tech first
 		const auto& engy = infos[i];
-		if (!engy.cdef->IsAvailable(frame)
+		if (engy.data.isOld || !engy.cdef->IsAvailable(frame)
 			|| !terrainMgr->CanBeBuiltAtSafe(engy.cdef, position))
 		{
 			continue;
@@ -2014,6 +2025,29 @@ void CEconomyManager::UpdateEconomy()
 	pullMtoS *= circuit->GetMilitaryManager()->ClampMobileCostRatio();
 }
 
+void CEconomyManager::IncPurpose(const CCircuitDef::Id defId)
+{
+	auto it = purposes.find(defId);
+	if (it == purposes.end()) {
+		purposes[defId].count = 1;
+	} else {
+		++it->second.count;
+	}
+}
+
+void CEconomyManager::DecPurpose(const CCircuitDef::Id defId)
+{
+	assert(purposes.find(defId) != purposes.end());
+	--purposes[defId].count;
+}
+
+bool CEconomyManager::IsNoPurpose(const CCircuitDef::Id defId) const
+{
+	auto it = purposes.find(defId);
+	assert(it != purposes.end());
+	return (it == purposes.end()) || (it->second.count <= 0);
+}
+
 void CEconomyManager::ReclaimOldConvert(const SConvertExt* convertExt)
 {
 	if (circuit->IsLoadSave() || (reclConvertEff <= 0.f) || (IsEnergyFull() && !IsEnergyStalling())) {
@@ -2023,11 +2057,26 @@ void CEconomyManager::ReclaimOldConvert(const SConvertExt* convertExt)
 	auto ids = circuit->GetCallback()->GetFriendlyUnitIdsIn(circuit->GetSetupManager()->GetMetalBase(), 1000.f, false);
 	for (int id : ids) {
 		CCircuitUnit* unit = circuit->GetTeamUnit(id);
-		if ((unit == nullptr) || !convertDefs.IsAvail(unit->GetCircuitDef())) {
+		if (unit == nullptr) {
 			continue;
 		}
-		auto info = convertDefs.GetAvailInfo(unit->GetCircuitDef());
+		CCircuitDef* cdef = unit->GetCircuitDef();
+		if (!convertDefs.IsAvail(cdef)) {
+			continue;
+		}
+		auto info = convertDefs.GetAvailInfo(cdef);
 		if (convertExt->make > info->make * reclConvertEff) {
+			if (!info->isOld) {
+				const_cast<SConvertExt*>(info)->isOld = true;
+				DecPurpose(cdef->GetId());
+			}
+		} else {
+			if (info->isOld) {
+				const_cast<SConvertExt*>(info)->isOld = false;
+				IncPurpose(cdef->GetId());
+			}
+		}
+		if (IsNoPurpose(cdef->GetId())) {
 			circuit->GetBuilderManager()->Enqueue(TaskB::Reclaim(IUnitTask::Priority::HIGH, unit, FRAMES_PER_SEC * 1200));
 			energyNet += convertExt->energyUse;
 			if (energyNet > 0) {
@@ -2046,19 +2095,31 @@ void CEconomyManager::ReclaimOldEnergy(const SEnergyExt* energyExt)
 	auto ids = circuit->GetCallback()->GetFriendlyUnitIdsIn(circuit->GetSetupManager()->GetBasePos(), 1000.f, false);
 	for (int id : ids) {
 		CCircuitUnit* unit = circuit->GetTeamUnit(id);
-		if ((unit == nullptr) || !energyDefs.IsAvail(unit->GetCircuitDef())) {
+		if (unit == nullptr) {
 			continue;
 		}
-		auto info = energyDefs.GetAvailInfo(unit->GetCircuitDef());
+		CCircuitDef* cdef = unit->GetCircuitDef();
+		if (!energyDefs.IsAvail(cdef)) {
+			continue;
+		}
+		auto info = energyDefs.GetAvailInfo(cdef);
 		if (energyExt->cond.score > info->cond.score * reclEnergyEff) {
+			if (!info->isOld) {
+				const_cast<SEnergyExt*>(info)->isOld = true;
+				DecPurpose(cdef->GetId());
+			}
+		} else {
+			if (info->isOld) {
+				const_cast<SEnergyExt*>(info)->isOld = false;
+				IncPurpose(cdef->GetId());
+			}
+		}
+		if (IsNoPurpose(cdef->GetId())) {
 			energyIncome -= info->make;
 			if (energyIncome < energyExt->cond.energyIncome) {
 				break;
 			}
 			circuit->GetBuilderManager()->Enqueue(TaskB::Reclaim(IUnitTask::Priority::HIGH, unit, FRAMES_PER_SEC * 1200));
-			unit->GetCircuitDef()->SetMaxThisUnit(0);
-		} else {
-			unit->GetCircuitDef()->SetMaxThisUnit(info->cond.limit);
 		}
 	}
 }
