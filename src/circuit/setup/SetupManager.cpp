@@ -6,7 +6,6 @@
  */
 
 #include "setup/SetupManager.h"
-#include "setup/SetupData.h"
 #include "script/SetupScript.h"
 #include "map/InfluenceMap.h"
 #include "module/EconomyManager.h"
@@ -42,7 +41,7 @@ using namespace terrain;
 CSetupManager::CSetupManager(CCircuitAI* circuit, CSetupData* setupData)
 		: circuit(circuit)
 		, setupData(setupData)
-		, script(new CSetupScript(circuit->GetScriptManager()))
+		, script(new CSetupScript(circuit->GetScriptManager(), this))
 		, config(nullptr)
 		, commander(nullptr)
 		, startPos(-RgtVector)
@@ -88,8 +87,8 @@ void CSetupManager::DisabledUnits()
 		}
 	};
 
-	auto it = setupData->GetModOptions().find("disabledunits");
-	if (it != setupData->GetModOptions().end()) {
+	auto it = GetModOptions().find("disabledunits");
+	if (it != GetModOptions().end()) {
 		// !setoptions disabledunits=armwar+armpw+raveparty+zenith+mahlazer
 		disableUnits(it->second);
 	}
@@ -115,6 +114,11 @@ void CSetupManager::CloseConfig()
 {
 	delete config;
 	config = nullptr;
+}
+
+const CSetupData::ModOptions& CSetupManager::GetModOptions() const
+{
+	return setupData->GetModOptions();
 }
 
 bool CSetupManager::HasStartBoxes() const
@@ -735,11 +739,6 @@ void CSetupManager::OverrideConfig()
 		circuit->LOG("Override config %s by startscript", configName.c_str());
 		config = ParseConfig(cfgStr, "startscript", config);
 	}
-}
-
-CScriptDictionary* CSetupManager::GetModOptions()
-{
-	return script->GetModOptions(setupData->GetModOptions());
 }
 
 } // namespace circuit

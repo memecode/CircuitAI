@@ -7,13 +7,15 @@
 
 #include "script/SetupScript.h"
 #include "script/ScriptManager.h"
+#include "setup/SetupManager.h"
 
 #include "angelscript/add_on/scriptdictionary/scriptdictionary.h"
 
 namespace circuit {
 
-CSetupScript::CSetupScript(CScriptManager* scr)
+CSetupScript::CSetupScript(CScriptManager* scr, CSetupManager* mgr)
 		: IScript(scr)
+		, manager(mgr)
 {
 }
 
@@ -21,7 +23,7 @@ CSetupScript::~CSetupScript()
 {
 }
 
-CScriptDictionary* CSetupScript::GetModOptions(const CSetupData::ModOptions& modoptions)
+CScriptDictionary* CSetupScript::GetModOptions()
 {
 	/*
 	 * dictionary@ mo = aiSetupMgr.GetModOptions();
@@ -30,6 +32,7 @@ CScriptDictionary* CSetupScript::GetModOptions(const CSetupData::ModOptions& mod
 	 */
 	CScriptDictionary* dict = CScriptDictionary::Create(script->GetEngine());
 	int typeId = script->GetEngine()->GetTypeIdByDecl("string");
+	const CSetupData::ModOptions& modoptions = manager->GetModOptions();
 	for (const auto& kv : modoptions) {
 		dict->Set(kv.first, (void*)&kv.second, typeId);
 	}

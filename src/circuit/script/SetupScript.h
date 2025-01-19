@@ -9,22 +9,24 @@
 #define SRC_CIRCUIT_SCRIPT_SETUPSCRIPT_H_
 
 #include "script/Script.h"
-#include "setup/SetupData.h"
 
 class CScriptDictionary;
 
 namespace circuit {
 
-class CScriptManager;
+class CSetupManager;
 
 class CSetupScript: public IScript {
 public:
-	CSetupScript(CScriptManager* scr);
+	CSetupScript(CScriptManager* scr, CSetupManager* mgr);
 	virtual ~CSetupScript();
 
 	virtual bool Init() override { return true; }
 
-	CScriptDictionary* GetModOptions(const CSetupData::ModOptions& modoptions);
+	CScriptDictionary* GetModOptions();
+
+private:
+	CSetupManager* manager;
 };
 
 } /* namespace circuit */

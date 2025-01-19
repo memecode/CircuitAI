@@ -63,6 +63,8 @@ private:
 
 	void MessageCallback(const asSMessageInfo *msg, void *param);
 
+	void RegisterStdStringUtility();
+
 #ifdef DEBUG_VIS
 public:
 	void AddScript(IScript* scr) { scripts.push_back(scr); }

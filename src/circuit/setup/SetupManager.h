@@ -8,6 +8,7 @@
 #ifndef SRC_CIRCUIT_STATIC_SETUPMANAGER_H_
 #define SRC_CIRCUIT_STATIC_SETUPMANAGER_H_
 
+#include "setup/SetupData.h"
 #include "unit/CircuitDef.h"
 #include "json/json-forwards.h"
 
@@ -15,12 +16,9 @@
 
 #include <functional>
 
-class CScriptDictionary;
-
 namespace circuit {
 
 class CCircuitAI;
-class CSetupData;
 class CSetupScript;
 class CAllyTeam;
 class IMainJob;
@@ -56,6 +54,7 @@ public:
 	const Json::Value& GetConfig() const { return *config; }
 	const std::string& GetConfigName() const { return configName; }
 
+	const CSetupData::ModOptions& GetModOptions() const;
 	bool HasStartBoxes() const;
 	bool CanChooseStartPos() const;
 
@@ -103,8 +102,6 @@ private:
 	Json::Value* ParseConfig(const std::string& cfgStr, const std::string& cfgName, Json::Value* cfg = nullptr);
 	void UpdateJson(Json::Value& a, Json::Value& b);
 	void OverrideConfig();
-
-	CScriptDictionary* GetModOptions();  // for AS
 
 	CCircuitAI* circuit;
 	CSetupData* setupData;
