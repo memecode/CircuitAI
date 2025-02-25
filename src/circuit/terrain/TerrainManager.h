@@ -220,9 +220,9 @@ public:
 	bool CanMobileReachAt(terrain::SArea* area, const springai::AIFloat3& destination, const float range);
 	bool CanMobileReachAtSafe(terrain::SArea* area, const springai::AIFloat3& destination, const float range, const float threat = THREAT_MIN);
 
-	float GetPercentLand() const { return areaData->percentLand; }
+	float GetLandPercent() const { return areaData->percentLand; }
 	float GetMinLandPercent() const { return minLandPercent; }
-	bool IsWaterMap() const { return areaData->percentLand < minLandPercent; }
+	bool IsWaterMap() const { return GetLandPercent() < GetMinLandPercent(); }
 	bool IsWaterSector(const springai::AIFloat3& position) const { return IsWaterSector(GetSectorIndex(position)); }
 	bool IsWaterSector(const int sIndex) const { return areaData->sector[sIndex].isWater; }
 
