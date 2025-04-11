@@ -17,7 +17,8 @@ public:
 	CQueryPathWide(const CPathFinder& pathfinder, int id);
 	virtual ~CQueryPathWide();
 
-	void InitQuery(const springai::AIFloat3& startPos, const springai::AIFloat3& endPos, const IndexVec& targets);
+	void InitQuery(const springai::AIFloat3& startPos, const springai::AIFloat3& endPos,
+					const IndexVec& targets, int howWide);
 
 	void Prepare();
 
@@ -31,6 +32,7 @@ public:
 	// Input Data
 	const springai::AIFloat3& GetStartPos() const { return startPos; }
 	const springai::AIFloat3& GetEndPos() const { return endPos; }
+	int GetHowWide() const { return howWide; }
 
 	// Result
 	const std::shared_ptr<CPathInfo>& GetPathInfo() const { return pPath; }
@@ -43,6 +45,7 @@ private:
 	springai::AIFloat3 startPos;
 	springai::AIFloat3 endPos;
 	IndexVec targets;
+	int howWide = 1;  // 1, 2, 3, 4 path sectors
 };
 
 } // namespace circuit

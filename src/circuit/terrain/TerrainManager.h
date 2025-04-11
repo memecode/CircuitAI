@@ -72,13 +72,15 @@ public:
 									 const springai::AIFloat3& pos,
 									 float searchRadius,
 									 int facing,
-									 bool isIgnore = false);
+									 bool isIgnore = false,
+									 bool isHighRes = false);
 	springai::AIFloat3 FindBuildSite(CCircuitDef* cdef,
 									 const springai::AIFloat3& pos,
 									 float searchRadius,
 									 int facing,
 									 TerrainPredicate& predicate,
-									 bool isIgnore = false);
+									 bool isIgnore = false,
+									 bool isHighRes = false);
 //	springai::AIFloat3 FindSpringBuildSite(CCircuitDef* cdef, const springai::AIFloat3& pos, float searchRadius, int facing);
 	void DoLineOfDef(const springai::AIFloat3& start, const springai::AIFloat3& end, CCircuitDef* buildDef,
 			std::function<void (const springai::AIFloat3& pos, CCircuitDef* buildDef)> exec) const;  // FillRowOfBuildPos
@@ -151,7 +153,11 @@ private:
 		springai::AIFloat3 endPos;
 		IndexVec targets;
 	};
-	std::map<CCircuitUnit*, std::shared_ptr<CPathInfo>> busPath;
+	struct WidePathInfo {
+		std::shared_ptr<CPathInfo> pPath;
+		int howWide;
+	};
+	std::map<CCircuitUnit*, WidePathInfo> busPath;
 	std::map<CCircuitUnit*, FactoryPathQuery> busQueries;
 	void MarkBusPath();
 	void FillParentBusNodes(CPathInfo* pathInfo);

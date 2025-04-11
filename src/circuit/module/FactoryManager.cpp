@@ -73,11 +73,11 @@ CFactoryManager::CFactoryManager(CCircuitAI* circuit)
 		// Mark path from factory to lanePos as blocked
 		if (unit->GetCircuitDef()->GetMobileId() >= 0) {  // no air factory
 			CSetupManager* setupMgr = this->circuit->GetSetupManager();
-			CCircuitDef* reprDef = GetRepresenter(unit->GetCircuitDef());
-			if (reprDef == nullptr) {
-				reprDef = setupMgr->GetCommChoice();
+			CCircuitDef* largestDef = GetLargestDef(unit->GetCircuitDef());
+			if (largestDef == nullptr) {
+				largestDef = setupMgr->GetCommChoice();
 			}
-			terrainMgr->AddBusPath(unit, setupMgr->GetLanePos(), reprDef);
+			terrainMgr->AddBusPath(unit, setupMgr->GetLanePos(), largestDef);
 		}
 	};
 	auto factoryFinishedHandler = [this](CCircuitUnit* unit) {
@@ -1016,8 +1016,7 @@ CRecruitTask* CFactoryManager::UpdateFirePower(CCircuitUnit* builder, bool isAct
 
 	CCircuitDef* buildDef = circuit->GetCircuitDef(result.id);
 	const AIFloat3& pos = builder->GetPos(circuit->GetLastFrame());
-	UnitDef* def = builder->GetCircuitDef()->GetDef();
-	float radius = std::max(def->GetXSize(), def->GetZSize()) * SQUARE_SIZE / 2;
+	float radius = std::max(builder->GetCircuitDef()->GetMoveXSize(), builder->GetCircuitDef()->GetMoveZSize()) * SQUARE_SIZE / 2;
 	// FIXME CCircuitDef::RoleType <-> CRecruitTask::RecruitType relations
 	return Enqueue(TaskS::Recruit(CRecruitTask::RecruitType::FIREPOWER, result.priority, buildDef, pos, radius));
 }
@@ -1079,6 +1078,24 @@ CCircuitDef* CFactoryManager::GetRepresenter(const CCircuitDef* facDef) const
 	} else {
 		return GetWaterDef(facDef);
 	}
+}
+
+CCircuitDef* CFactoryManager::GetLargestDef(const CCircuitDef* facDef) const
+{
+	auto it = factoryDefs.find(facDef->GetId());
+	if (it == factoryDefs.end()) {
+		return nullptr;
+	}
+	int maxSize = -1;
+	CCircuitDef* largestDef = nullptr;
+	for (CCircuitDef* bd : it->second.buildDefs) {
+		int size = std::max(bd->GetMoveXSize(), bd->GetMoveZSize());
+		if (size > maxSize) {
+			maxSize = size;
+			largestDef = bd;
+		}
+	}
+	return largestDef;
 }
 
 CCircuitDef* CFactoryManager::DefaultGetFactoryToBuild(const AIFloat3& position, bool isStart, bool isReset)

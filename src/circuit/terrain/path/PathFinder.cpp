@@ -297,7 +297,9 @@ std::shared_ptr<IPathQuery> CPathFinder::CreatePathWideQuery(
 	CQueryPathWide* query = static_cast<CQueryPathWide*>(pQuery.get());
 
 	FillMapData(query, unit, cdef, startPos.y);
-	query->InitQuery(startPos, endPos, targets);
+	const float sideSize = std::max(cdef->GetMoveXSize(), cdef->GetMoveZSize());
+	const int howWide = std::ceil(sideSize * SQUARE_SIZE / squareSize);  // squareSize ~= 32, 64, 128
+	query->InitQuery(startPos, endPos, targets, howWide);
 
 	return pQuery;
 }
@@ -820,7 +822,7 @@ void CPathFinder::MakePathWide(IPathQuery* query, NSMicroPather::CMicroPather* m
 	AIFloat3& startPos = q->GetStartPosRef();
 	AIFloat3& endPos = q->GetEndPosRef();
 	IndexVec& targets = q->GetTargetsRef();
-	const int howWide = squareSize / 32;  // squareSize ~= 32, 64, 128
+	const int howWide = q->GetHowWide();
 
 	CPathInfo& iPath = q->GetPathInfoRef();
 	float& pathCost = q->GetPathCostRef();

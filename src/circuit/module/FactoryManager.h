@@ -149,6 +149,7 @@ public:
 	CCircuitDef* GetLandDef(const CCircuitDef* facDef) const;
 	CCircuitDef* GetWaterDef(const CCircuitDef* facDef) const;
 	CCircuitDef* GetRepresenter(const CCircuitDef* facDef) const;
+	CCircuitDef* GetLargestDef(const CCircuitDef* facDef) const;
 
 	float GetAssistSpeed() const { return GetSideInfo().assistDef->GetBuildSpeed(); }
 	float GetAssistRange() const { return GetSideInfo().assistDef->GetBuildDistance(); }

@@ -1006,23 +1006,41 @@ int CMicroPather::FindWidePathToBus(void* startNode, VoidVec& endNodes,
 			for (int i = 0; i < 4; ++i) {
 				const int indexEnd = offsets[i] + indexStart;
 
-				if (CantMoveTo(indexEnd)) {
-					continue;
-				}
-				switch (howWide) {  // 1, 2, 4
-					case 0:
-						if (CantMoveTo(indexEnd - 1) || CantMoveTo(indexEnd + 1)
+				switch (howWide) {
+					case 1:
+						if (CantMoveTo(indexEnd)) {
+							continue;
+						}
+						break;
+					case 2:
+						if (CantMoveTo(indexEnd) || CantMoveTo(indexEnd + 1)
+							|| CantMoveTo(indexEnd + mapSizeX) || CantMoveTo(indexEnd + mapSizeX + 1))
+						{
+							continue;
+						}
+						break;
+					case 3:
+						if (CantMoveTo(indexEnd) || CantMoveTo(indexEnd - 1) || CantMoveTo(indexEnd + 1)
 							|| CantMoveTo(indexEnd - mapSizeX) || CantMoveTo(indexEnd + mapSizeX))  // offsets[0..3]
 						{
 							continue;
 						}
 						break;
-					case 1:
-						if (CantMoveTo(indexEnd + 1) || CantMoveTo(indexEnd + mapSizeX)) {
+					case 4:
+					default:
+						auto check4 = [this](const int indexEnd) {
+							for (int k = -1; k < 3; ++k) {
+								for (int j = -1; j < 3; ++j) {
+									if (CantMoveTo(indexEnd + k * mapSizeX + j)) {
+										return true;
+									}
+								}
+							}
+							return false;
+						};
+						if (check4(indexEnd)) {
 							continue;
 						}
-						break;
-					default:
 						break;
 				}
 
@@ -1045,15 +1063,24 @@ int CMicroPather::FindWidePathToBus(void* startNode, VoidVec& endNodes,
 				#endif
 
 				float newCost = nodeCostFromStart;
-				float nodeCost = canMoveArray[indexEnd] + moveFun(directNode->index2);
-				switch (howWide) {  // 1, 2, 4
-					case 0:
-						nodeCost += canMoveArray[indexEnd - 1] + canMoveArray[indexEnd + 1] + canMoveArray[indexEnd - mapSizeX] + canMoveArray[indexEnd + mapSizeX];
-						break;
+				float nodeCost = moveFun(directNode->index2);
+				switch (howWide) {
 					case 1:
-						nodeCost += canMoveArray[indexEnd + 1] + canMoveArray[indexEnd + mapSizeX];
+						nodeCost += canMoveArray[indexEnd];
 						break;
+					case 2:
+						nodeCost += canMoveArray[indexEnd] + canMoveArray[indexEnd + 1] + canMoveArray[indexEnd + mapSizeX];
+						break;
+					case 3:
+						nodeCost += canMoveArray[indexEnd] + canMoveArray[indexEnd - 1] + canMoveArray[indexEnd + 1] + canMoveArray[indexEnd - mapSizeX] + canMoveArray[indexEnd + mapSizeX];
+						break;
+					case 4:
 					default:
+						for (int k = -1; k < 3; ++k) {
+							for (int j = -1; j < 3; ++j) {
+								nodeCost += canMoveArray[indexEnd + k * mapSizeX + j];
+							}
+						}
 						break;
 				}
 

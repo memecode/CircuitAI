@@ -210,7 +210,15 @@ CCircuitDef::CCircuitDef(CCircuitAI* circuit, UnitDef* def, std::unordered_set<I
 
 	COOAICallback* clb = circuit->GetCallback();
 	MoveData* md = def->GetMoveData();
-	isSubmarine  = (md == nullptr) ? false : md->IsSubMarine();
+	if (md == nullptr) {
+		isSubmarine = false;
+		moveXSize = def->GetXSize();
+		moveZSize = def->GetZSize();
+	} else{
+		isSubmarine = md->IsSubMarine();
+		moveXSize = md->GetXSize();
+		moveZSize = md->GetZSize();
+	}
 	delete md;
 	isAbleToFly       = def->IsAbleToFly();
 	isPlane           = !def->IsHoverAttack() && isAbleToFly;

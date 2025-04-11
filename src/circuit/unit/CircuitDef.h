@@ -344,6 +344,8 @@ public:
 	void SetRetreat(float value) { retreat = value; }
 	float GetRetreat() const { return retreat; }
 
+	int GetMoveXSize() const { return moveXSize; }
+	int GetMoveZSize() const { return moveZSize; }
 	float GetRadius();
 	float GetHeight();
 	bool IsInWater(float elevation, float posY);
@@ -486,6 +488,8 @@ private:
 	float jumpRange;
 	float retreat;
 
+	int moveXSize;
+	int moveZSize;
 	float radius;
 	float height;
 	float topOffset;  // top point offset in water

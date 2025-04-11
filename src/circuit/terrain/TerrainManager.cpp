@@ -521,11 +521,15 @@ void CTerrainManager::AddBusPath(CCircuitUnit* unit, const AIFloat3& toPos, CCir
 	//       Reduce end-nodes in half (interleave) and test manhattan distance to each?
 	IndexVec targets;
 	for (const auto& kv : busPath) {
-		if (kv.second != nullptr) {
+		if (kv.second.pPath != nullptr) {
 			// targets will have many duplicates, but performance hit shouldn't
 			// worth an effort to store additional array of only unique sectors
 			// @see FillParentBusNodes
-			targets.insert(targets.end(), kv.second->path.begin(), kv.second->path.end());
+			auto startIt = kv.second.pPath->path.begin();
+			const int dist = 1024 / GetConvertStoP();  // 1024 / 32|64|128
+			// TODO: Better to advance from closest point, then dist can be halved
+			std::advance(startIt, std::min<int>(dist, kv.second.pPath->path.size()));
+			targets.insert(targets.end(), startIt, kv.second.pPath->path.end());
 		}
 	}
 
@@ -534,7 +538,7 @@ void CTerrainManager::AddBusPath(CCircuitUnit* unit, const AIFloat3& toPos, CCir
 	fpq.startPos = startPos;
 	fpq.endPos = endPos;
 	fpq.targets = std::move(targets);
-	busPath[unit] = nullptr;
+	busPath[unit] = {nullptr, 0};
 }
 
 void CTerrainManager::DelBusPath(CCircuitUnit* unit)
@@ -544,21 +548,24 @@ void CTerrainManager::DelBusPath(CCircuitUnit* unit)
 		return;
 	}
 
-	if (it->second != nullptr) {
+	if (it->second.pPath != nullptr) {
 		// TODO: Path for new factories contains only part that connects to 1st built path.
 		//       Hence removing it leaves others with short leftover.
 		//       Place it to AllyTeam and count or copy common path nodes.
 		CPathFinder* pathfinder = circuit->GetPathfinder();
 		const int granularity = pathfinder->GetSquareSize() / (SQUARE_SIZE * 2);
-		const int howWide = pathfinder->GetSquareSize() / 32;
-		for (int index : it->second->path) {
+		const int howWide = it->second.howWide;
+		const int squares = howWide * granularity;
+		for (int index : it->second.pPath->path) {
 			int ix, iz;
 			pathfinder->PathIndex2PathXY(index, &ix, &iz);
 
 			ix = ix * granularity + granularity / 2;
 			iz = iz * granularity + granularity / 2;
-			int2 m1 = (howWide & 1) ? int2(ix - 0, iz - 0) : int2(ix - 3, iz - 3);
-			int2 m2 = (howWide & 1) ? int2(ix + 6, iz + 6) : int2(ix + 3, iz + 3);
+			int2 m1 = (howWide & 1) ? int2(ix - squares / 2, iz - squares / 2)
+					: int2(ix - (squares - granularity) / 2, iz - (squares - granularity) / 2);
+			int2 m2 = (howWide & 1) ? int2(ix + squares / 2, iz + squares / 2)
+					: int2(ix + (squares + granularity) / 2, iz + (squares + granularity) / 2);
 			blockingMap.Bound(m1, m2);
 			for (int z = m1.y; z < m2.y; ++z) {
 				for (int x = m1.x; x < m2.x; ++x) {
@@ -581,27 +588,31 @@ AIFloat3 CTerrainManager::GetBusPos(CCircuitDef* facDef, const AIFloat3& pos, in
 	float minSqDist = std::numeric_limits<float>::max();
 	for (auto& kv : busPath) {
 		const float sqDist = kv.first->GetPos(frame).SqDistance2D(pos);
-		if ((minSqDist > sqDist) && (kv.second != nullptr)) {
+		if ((minSqDist > sqDist) && (kv.second.pPath != nullptr)) {
 			minSqDist = sqDist;
 			unit = kv.first;
-			pathInfo = kv.second.get();
+			pathInfo = kv.second.pPath.get();
 		}
 	}
 	if ((unit == nullptr) || pathInfo->path.empty()) {
 		return pos;
 	}
 
-	/// TODO: make sorted offsets pattern for this specific case, instead of circle
+	// TODO: make sorted offsets pattern for this specific case, instead of circle.
+	// After reclaiming old eco there could be blocked position for T3 in the back.
+	// a) use max howWide all the time?
+	// b) pre-occupy place for T2 and T3, as current "build along path" moves factory closer to front?
 	CPathFinder* pathfinder = circuit->GetPathfinder();
-	const int incr = std::max(1, 64 / GetConvertStoP());  // convertStoP ~= 32, 64, 128
+	const int incr = std::max(1, 128 / GetConvertStoP());  // convertStoP ~= 32, 64, 128
 	const int maxIdx = std::min<int>(pathInfo->path.size(), 32 * incr);
 	AIFloat3 prevPos = pathfinder->PathIndex2Pos(pathInfo->path[0]);
-	const float searchRadius = std::max(facDef->GetDef()->GetZSize() * SQUARE_SIZE, GetConvertStoP()) / 2;
+	const int zElmoSize = facDef->GetDef()->GetZSize() * SQUARE_SIZE;
+	const float searchRadius = std::max(zElmoSize / 2 + SQUARE_SIZE * 2, GetConvertStoP());
 	const std::array<AIFloat3, 4> faceOffs = {
-		AIFloat3(0, 0, -GetConvertStoP() * incr),  // UNIT_FACING_SOUTH
-		AIFloat3(-GetConvertStoP() * incr, 0, 0),  // UNIT_FACING_EAST
-		AIFloat3(0, 0, GetConvertStoP() * incr),  // UNIT_FACING_NORTH
-		AIFloat3(GetConvertStoP() * incr, 0, 0)  // UNIT_FACING_WEST
+		AIFloat3(0, 0, -(GetConvertStoP() * incr + zElmoSize) / 2),  // UNIT_FACING_SOUTH
+		AIFloat3(-(GetConvertStoP() * incr + zElmoSize) / 2, 0, 0),  // UNIT_FACING_EAST
+		AIFloat3(0, 0, (GetConvertStoP() * incr + zElmoSize) / 2),  // UNIT_FACING_NORTH
+		AIFloat3((GetConvertStoP() * incr + zElmoSize) / 2, 0, 0)  // UNIT_FACING_WEST
 	};
 	for (int index = incr; index < maxIdx; index += incr) {
 		const AIFloat3& pathPos = pathfinder->PathIndex2Pos(pathInfo->path[index]);
@@ -614,7 +625,7 @@ AIFloat3 CTerrainManager::GetBusPos(CCircuitDef* facDef, const AIFloat3& pos, in
 		for (int facing : testFaces) {
 			AIFloat3 buildPos = pathPos + faceOffs[facing];
 			CTerrainManager::CorrectPosition(buildPos);
-			buildPos = FindBuildSite(facDef, buildPos, searchRadius, facing);
+			buildPos = FindBuildSite(facDef, buildPos, searchRadius, facing, false, true);
 			if (utils::is_valid(buildPos)) {
 				outFacing = facing;
 				return buildPos;
@@ -625,15 +636,17 @@ AIFloat3 CTerrainManager::GetBusPos(CCircuitDef* facDef, const AIFloat3& pos, in
 	return pos;
 }
 
-AIFloat3 CTerrainManager::FindBuildSite(CCircuitDef* cdef, const AIFloat3& pos, float searchRadius, int facing, bool isIgnore)
+AIFloat3 CTerrainManager::FindBuildSite(CCircuitDef* cdef, const AIFloat3& pos,
+		float searchRadius, int facing, bool isIgnore, bool isHighRes)
 {
 	TerrainPredicate predicate = [](const AIFloat3& p) {
 		return true;
 	};
-	return FindBuildSite(cdef, pos, searchRadius, facing, predicate, isIgnore);
+	return FindBuildSite(cdef, pos, searchRadius, facing, predicate, isIgnore, isHighRes);
 }
 
-AIFloat3 CTerrainManager::FindBuildSite(CCircuitDef* cdef, const AIFloat3& pos, float searchRadius, int facing, TerrainPredicate& predicate, bool isIgnore)
+AIFloat3 CTerrainManager::FindBuildSite(CCircuitDef* cdef, const AIFloat3& pos,
+		float searchRadius, int facing, TerrainPredicate& predicate, bool isIgnore, bool isHighRes)
 {
 	ZoneScoped;
 
@@ -643,7 +656,13 @@ AIFloat3 CTerrainManager::FindBuildSite(CCircuitDef* cdef, const AIFloat3& pos, 
 
 	auto search = blockInfos.find(cdef->GetId());
 	if (search != blockInfos.end()) {
-		return FindBuildSiteByMask(cdef, pos, searchRadius, facing, search->second, predicate);
+		IBlockMask* mask = search->second;
+		int xmsize = mask->GetXSize();
+		int zmsize = mask->GetZSize();
+		if (!isHighRes && (searchRadius > SQUARE_SIZE * 2 * 100 || xmsize * zmsize > GRID_RATIO_LOW * GRID_RATIO_LOW * 4)) {
+			return FindBuildSiteByMaskLow(cdef, pos, searchRadius, facing, mask, predicate);
+		}
+		return FindBuildSiteByMask(cdef, pos, searchRadius, facing, mask, predicate);
 	}
 
 	if (searchRadius > SQUARE_SIZE * 2 * 100) {
@@ -657,7 +676,9 @@ AIFloat3 CTerrainManager::FindBuildSite(CCircuitDef* cdef, const AIFloat3& pos, 
 	const int xsize = (((facing & 1) == 0) ? unitDef->GetXSize() : unitDef->GetZSize()) / 2;
 	const int zsize = (((facing & 1) == 1) ? unitDef->GetXSize() : unitDef->GetZSize()) / 2;
 
-	const SBlockingMap::SM notIgnore = static_cast<SBlockingMap::SM>(isIgnore ? SBlockingMap::StructMask::NONE : SBlockingMap::StructMask::ALL);
+	const SBlockingMap::SM notIgnore = static_cast<SBlockingMap::SM>(
+		isIgnore ? SBlockingMap::StructMask::NONE : SBlockingMap::StructMask::ALL
+	);
 	auto isOpenSite = [this, notIgnore](const int2& s1, const int2& s2) {
 		for (int z = s1.y; z < s2.y; ++z) {
 			for (int x = s1.x; x < s2.x; ++x) {
@@ -940,7 +961,8 @@ const CTerrainManager::SearchOffsetsLow& CTerrainManager::GetSearchOffsetTableLo
 	return searchOffsetsLow;
 }
 
-AIFloat3 CTerrainManager::FindBuildSiteLow(CCircuitDef* cdef, const AIFloat3& pos, float searchRadius, int facing, TerrainPredicate& predicate)
+AIFloat3 CTerrainManager::FindBuildSiteLow(CCircuitDef* cdef, const AIFloat3& pos,
+		float searchRadius, int facing, TerrainPredicate& predicate)
 {
 	UnitDef* unitDef = cdef->GetDef();
 	const int xsize = (((facing & 1) == 0) ? unitDef->GetXSize() : unitDef->GetZSize()) / 2;
@@ -1006,13 +1028,11 @@ AIFloat3 CTerrainManager::FindBuildSiteLow(CCircuitDef* cdef, const AIFloat3& po
 	return -RgtVector;
 }
 
-AIFloat3 CTerrainManager::FindBuildSiteByMask(CCircuitDef* cdef, const AIFloat3& pos, float searchRadius, int facing, IBlockMask* mask, TerrainPredicate& predicate)
+AIFloat3 CTerrainManager::FindBuildSiteByMask(CCircuitDef* cdef, const AIFloat3& pos,
+		float searchRadius, int facing, IBlockMask* mask, TerrainPredicate& predicate)
 {
 	int xmsize = mask->GetXSize();
 	int zmsize = mask->GetZSize();
-	if ((searchRadius > SQUARE_SIZE * 2 * 100) || (xmsize * zmsize > GRID_RATIO_LOW * GRID_RATIO_LOW * 4)) {
-		return FindBuildSiteByMaskLow(cdef, pos, searchRadius, facing, mask, predicate);
-	}
 
 	UnitDef* unitDef = cdef->GetDef();
 	int xssize, zssize;
@@ -1127,7 +1147,8 @@ AIFloat3 CTerrainManager::FindBuildSiteByMask(CCircuitDef* cdef, const AIFloat3&
 	return -RgtVector;
 }
 
-AIFloat3 CTerrainManager::FindBuildSiteByMaskLow(CCircuitDef* cdef, const AIFloat3& pos, float searchRadius, int facing, IBlockMask* mask, TerrainPredicate& predicate)
+AIFloat3 CTerrainManager::FindBuildSiteByMaskLow(CCircuitDef* cdef, const AIFloat3& pos,
+		float searchRadius, int facing, IBlockMask* mask, TerrainPredicate& predicate)
 {
 	UnitDef* unitDef = cdef->GetDef();
 	int xmsize, zmsize, xssize, zssize;
@@ -1453,6 +1474,9 @@ void CTerrainManager::MarkBusPath()
 		if (pQuery != nullptr) {
 			continue;
 		}
+		// FIXME: Sometimes creates path through factory structure
+		// (structure sectors have high cost but don't block path, for future reclaiming).
+		// Also late-game fpq.targets for T3 may contain nodes from T1/T2 thin path (not wide enough).
 		pQuery = circuit->GetPathfinder()->CreatePathWideQuery(kv.first, fpq.mobileDef, fpq.startPos, fpq.endPos, fpq.targets);
 
 		circuit->GetPathfinder()->RunQuery(circuit->GetScheduler().get(), pQuery, [this](const IPathQuery* query) {
@@ -1464,15 +1488,18 @@ void CTerrainManager::MarkBusPath()
 			FillParentBusNodes(q->GetPathInfo().get());
 			CPathFinder* pathfinder = circuit->GetPathfinder();
 			const int granularity = pathfinder->GetSquareSize() / (SQUARE_SIZE * 2);
-			const int howWide = pathfinder->GetSquareSize() / 32;  // 1, 2, 4
+			const int howWide = q->GetHowWide();
+			const int squares = howWide * granularity;
 			for (int index : q->GetPathInfo()->path) {  // path can be empty
 				int ix, iz;
 				pathfinder->PathIndex2PathXY(index, &ix, &iz);
 
 				ix = ix * granularity + granularity / 2;
 				iz = iz * granularity + granularity / 2;
-				int2 m1 = (howWide & 1) ? int2(ix - 0, iz - 0) : int2(ix - 3, iz - 3);
-				int2 m2 = (howWide & 1) ? int2(ix + 6, iz + 6) : int2(ix + 3, iz + 3);
+				int2 m1 = (howWide & 1) ? int2(ix - squares / 2, iz - squares / 2)
+						: int2(ix - (squares - granularity) / 2, iz - (squares - granularity) / 2);
+				int2 m2 = (howWide & 1) ? int2(ix + squares / 2, iz + squares / 2)
+						: int2(ix + (squares + granularity) / 2, iz + (squares + granularity) / 2);
 				blockingMap.Bound(m1, m2);
 				for (int z = m1.y; z < m2.y; ++z) {
 					for (int x = m1.x; x < m2.x; ++x) {
@@ -1480,9 +1507,29 @@ void CTerrainManager::MarkBusPath()
 					}
 				}
 			}
-			it->second = q->GetPathInfo();
+			it->second.pPath = q->GetPathInfo();
+			it->second.howWide = q->GetHowWide();
 			busQueries.erase(query->GetUnit());
 		});
+
+		/*
+		 * Example of engine's Pathing usage.
+		 * Alas no threading and missing node extra-cost setters.
+		 */
+//		MoveData* moveData = fpq.mobileDef->GetDef()->GetMoveData();
+//		const int pathType = moveData->GetPathType();
+//		delete moveData;
+//		Pathing* pathing = circuit->GetPathing();
+//		// Error here: pathing->SetPathNodeCost();  For metal points. Doesn't exist!!!
+//		const int pathId = pathing->InitPath(fpq.startPos, fpq.endPos, pathType, circuit->GetPathfinder()->GetSquareSize());
+//		AIFloat3 point = pathing->GetNextWaypoint(pathId);
+//		AIFloat3 prevPoint = -RgtVector;
+//		while (point != prevPoint) {
+//			circuit->GetDrawer()->AddPoint(point, "");
+//			prevPoint = point;
+//			point = pathing->GetNextWaypoint(pathId);
+//		}
+//		pathing->FreePath(pathId);
 	}
 }
 
@@ -1492,10 +1539,10 @@ void CTerrainManager::FillParentBusNodes(CPathInfo* pathInfo)
 		return;
 	}
 	for (const auto& kv : busPath) {
-		if (kv.second == nullptr) {
+		if (kv.second.pPath == nullptr) {
 			continue;
 		}
-		const IndexVec& path = kv.second->path;
+		const IndexVec& path = kv.second.pPath->path;
 		auto it = path.begin();
 		while ((it != path.end()) && (pathInfo->path.back() != *it)) {
 			++it;
