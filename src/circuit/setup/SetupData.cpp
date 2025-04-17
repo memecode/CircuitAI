@@ -47,11 +47,32 @@ void CSetupData::ParseSetupScript(CCircuitAI* circuit, const char* setupScript)
 		std::advance(start, modoptionsTag.length());
 		end = utils::EndInBraces(start, end);
 
-		std::smatch section;
-		std::regex patternOption("(.*)=(.*);", std::regex::ECMAScript | std::regex::icase);
-		while (std::regex_search(start, end, section, patternOption)) {
-			modoptions[section[1]] = section[2];
+		// WARNING: Left as reminder. std::regex on long string, or with backtracking,
+		//          can cause STACK OVERFLOW!
+//		std::smatch section;
+//		std::regex patternOption("(.*)=(.*);", std::regex::ECMAScript | std::regex::icase);
+//		while (std::regex_search(start, end, section, patternOption)) {
+//			modoptions[section[1]] = section[2];
+//			start = section[0].second;
+//		}
+		while (start != end) {  // probably never true
+			std::smatch section;
+			std::regex patternOption("(\\w+)=", std::regex::ECMAScript | std::regex::icase);
+			if (!std::regex_search(start, end, section, patternOption)) {
+				break;  // actual exit point
+			}
+			std::string optName = section[1];
 			start = section[0].second;
+
+			std::string::const_iterator valEnd = start;
+			while (++valEnd != end && *valEnd != ';');
+			std::string optVal(start, valEnd);
+			modoptions[optName] = optVal;
+
+			if (valEnd != end) {
+				++valEnd;
+			}
+			start = valEnd;
 		}
 	}
 
