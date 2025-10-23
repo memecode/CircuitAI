@@ -82,19 +82,21 @@ public:
 	 * REARM:     use CMD_FIND_PAD when weapon is not ready
 	 * NO_DGUN:   do not use DGun
 	 * ANTI_STAT: only static targets
+	 * NO_REPAIR: do not repair marked unit
 	 */
 	enum class AttrType: RoleT {NONE = -1,
 		MELEE = 0, BOOST, NO_JUMP, NO_STRAFE,
 		STOCK, SIEGE, RET_HOLD, RET_FIGHT,
 		SOLO, BASE, DG_COST, DG_STILL,
 		JUMP, ONOFF, VAMPIRE, RARE,
-		FENCE, REARM, NO_DGUN, ANTI_STAT, _SIZE_};
+		FENCE, REARM, NO_DGUN, ANTI_STAT, NO_REPAIR, _SIZE_};
 	enum AttrMask: RoleM {
 		MELEE = 0x00000001, BOOST = 0x00000002, NO_JUMP  = 0x00000004, NO_STRAFE = 0x00000008,
 		STOCK = 0x00000010, SIEGE = 0x00000020, RET_HOLD = 0x00000040, RET_FIGHT = 0x00000080,
 		SOLO  = 0x00000100, BASE  = 0x00000200, DG_COST  = 0x00000400, DG_STILL  = 0x00000800,
 		JUMP  = 0x00001000, ONOFF = 0x00002000, VAMPIRE  = 0x00004000, RARE      = 0x00008000,
-		FENCE = 0x00010000, REARM = 0x00020000, NO_DGUN  = 0x00040000, ANTI_STAT = 0x00080000};
+		FENCE = 0x00010000, REARM = 0x00020000, NO_DGUN  = 0x00040000, ANTI_STAT = 0x00080000,
+		NO_REPAIR = 0x00100000};
 	using AttrT = std::underlying_type<AttrType>::type;
 	using AttrM = std::underlying_type<AttrMask>::type;
 
@@ -180,6 +182,7 @@ public:
 	bool IsAttrRearm()    const { return attr & AttrMask::REARM; }
 	bool IsAttrNoDGun()   const { return attr & AttrMask::NO_DGUN; }
 	bool IsAttrAntiStat() const { return attr & AttrMask::ANTI_STAT; }
+	bool IsAttrNoRepair() const { return attr & AttrMask::NO_REPAIR; }
 
 	bool IsHoldFire()   const { return fireState == FireType::HOLD; }
 	bool IsReturnFire() const { return fireState == FireType::RETURN; }

@@ -90,6 +90,7 @@ void CCircuitDef::InitStatic(CCircuitAI* circuit, CMaskHandler* roleMasker, CMas
 		{"rearm",     {ATTR_TYPE(REARM),     CCircuitDef::AttrMask::REARM}},
 		{"no_dgun",   {ATTR_TYPE(NO_DGUN),   CCircuitDef::AttrMask::NO_DGUN}},
 		{"anti_stat", {ATTR_TYPE(ANTI_STAT), CCircuitDef::AttrMask::ANTI_STAT}},
+		{"no_repair", {ATTR_TYPE(NO_REPAIR), CCircuitDef::AttrMask::NO_REPAIR}},
 	};
 	for (auto& kv : attrs) {
 		CMaskHandler::TypeMask tm = attrMasker->GetTypeMask(kv.first);

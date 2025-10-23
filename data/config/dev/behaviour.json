@@ -67,6 +67,7 @@
 		// "rearm" - use CMD_FIND_PAD when weapon is not ready
 		// "no_dgun" - do not use DGun
 		// "anti_stat" - only static targets
+		// "no_repair" - do not repair marked unit
 //		"attribute": ["boost", "no_strafe"],
 
 		// Fire state (fire at will by default)
@@ -1222,10 +1223,11 @@
 		"role": ["static"],
 		"build_mod": 300
 	},
-//	"armmex" : {
-//		"role": ["static"],
+	"armmex" : {
+		"role": ["static"],
+		"attribute": ["no_repair"]
 //		"build_mod": 500
-//	},
+	},
 	"armmoho" : {
 		"role": ["static"],
 		"build_mod": 200
@@ -1287,10 +1289,11 @@
 		"role": ["static"],
 		"build_mod": 300
 	},
-//	"cormex" : {
-//		"role": ["static"],
+	"cormex" : {
+		"role": ["static"],
+		"attribute": ["no_repair"]
 //		"build_mod": 500
-//	},
+	},
 	"cormoho" : {
 		"role": ["static"],
 		"build_mod": 200

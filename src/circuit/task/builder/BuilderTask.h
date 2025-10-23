@@ -29,6 +29,8 @@ struct SResource {
 
 class IBuilderTask: public IUnitTask {
 public:
+	friend class CInitScript;
+
 	enum class BuildType: char {
 		FACTORY = 0,
 		NANO,

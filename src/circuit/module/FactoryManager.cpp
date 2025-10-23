@@ -1406,7 +1406,7 @@ IUnitTask* CFactoryManager::CreateAssistTask(CCircuitUnit* unit)
 		CAllyUnit* candUnit = circuit->GetFriendlyUnit(u);
 		if ((candUnit == nullptr) || (candUnit == unit)
 			|| builderMgr->IsReclaimUnit(candUnit)
-			|| candUnit->GetCircuitDef()->IsMex())  // FIXME: BA, should be IsT1Mex()
+			|| candUnit->GetCircuitDef()->IsAttrNoRepair())
 		{
 			continue;
 		}
