@@ -1653,7 +1653,7 @@ void asCScriptFunction::JITCompile()
 
 	// Make sure the function has been compiled with JitEntry instructions
 	// For functions that has JitEntry this will be a quick test
-	asUINT length;
+	asUINT length = 0;
 	asDWORD *byteCode = GetByteCode(&length);
 	asDWORD *end = byteCode + length;
 	bool foundJitEntry = false;

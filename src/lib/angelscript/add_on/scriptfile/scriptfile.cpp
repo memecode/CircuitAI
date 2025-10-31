@@ -168,7 +168,7 @@ void ScriptFile_MovePos_Generic(asIScriptGeneric *gen)
 
 void RegisterScriptFile_Native(asIScriptEngine *engine)
 {
-    int r;
+    VARIABLE_IS_NOT_USED int r;
 
     r = engine->RegisterObjectType("file", 0, asOBJ_REF); assert( r >= 0 );
     r = engine->RegisterObjectBehaviour("file", asBEHAVE_FACTORY, "file @f()", asFUNCTION(ScriptFile_Factory), asCALL_CDECL); assert( r >= 0 );
@@ -201,7 +201,7 @@ void RegisterScriptFile_Native(asIScriptEngine *engine)
 
 void RegisterScriptFile_Generic(asIScriptEngine *engine)
 {
-	int r;
+	VARIABLE_IS_NOT_USED int r;
 
 	r = engine->RegisterObjectType("file", 0, asOBJ_REF); assert( r >= 0 );
 	r = engine->RegisterObjectBehaviour("file", asBEHAVE_FACTORY, "file @f()", asFUNCTION(ScriptFile_Factory_Generic), asCALL_GENERIC); assert( r >= 0 );

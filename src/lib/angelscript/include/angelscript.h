@@ -39,6 +39,12 @@
 #ifndef ANGELSCRIPT_H
 #define ANGELSCRIPT_H
 
+#ifdef __GNUC__
+#define VARIABLE_IS_NOT_USED __attribute__ ((unused))
+#else
+#define VARIABLE_IS_NOT_USED
+#endif
+
 #include <stddef.h>
 #ifndef _MSC_VER
 #include <stdint.h>
@@ -501,6 +507,7 @@ template <typename T>
 
 #define asMETHOD(c,m) asSMethodPtr<sizeof(void (c::*)())>::Convert((void (c::*)())(&c::m))
 #define asMETHODPR(c,m,p,r) asSMethodPtr<sizeof(void (c::*)())>::Convert(AS_METHOD_AMBIGUITY_CAST(r (c::*)p)(&c::m))
+#define asMETHOD2PR(c,b,m,p,r) asSMethodPtr<sizeof(void (c::*)())>::Convert(AS_METHOD_AMBIGUITY_CAST(r (c::*)p)(&b::m))
 
 #else // Class methods are disabled
 

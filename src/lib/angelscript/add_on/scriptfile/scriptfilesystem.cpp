@@ -4,7 +4,7 @@
 
 #if defined(_WIN32)
 #include <direct.h> // _getcwd
-#include <Windows.h> // FindFirstFile, GetFileAttributes
+#include <windows.h> // FindFirstFile, GetFileAttributes
 
 #undef DeleteFile
 #undef CopyFile
@@ -30,7 +30,7 @@ CScriptFileSystem *ScriptFileSystem_Factory()
 
 void RegisterScriptFileSystem_Native(asIScriptEngine *engine)
 {
-	int r;
+	VARIABLE_IS_NOT_USED int r;
 
 	assert( engine->GetTypeInfoByName("string") );
 	assert( engine->GetTypeInfoByDecl("array<string>") );
@@ -59,7 +59,7 @@ void RegisterScriptFileSystem_Native(asIScriptEngine *engine)
 
 void RegisterScriptFileSystem_Generic(asIScriptEngine *engine)
 {
-	int r;
+	VARIABLE_IS_NOT_USED int r;
 
 	assert( engine->GetTypeInfoByName("string") );
 	assert( engine->GetTypeInfoByDecl("array<string>") );
