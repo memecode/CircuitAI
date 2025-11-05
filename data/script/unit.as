@@ -67,9 +67,13 @@ enum UseAs {
 	ENERGY, GEO, MEX, CONVERT, STORE, AIRPAD  // economy
 }
 
+enum RangeType {
+	AIR = 0, LAND, WATER
+}
+
 }  // namespace Unit
 
-namespace RT {
+namespace RT {  // Role Type
 Type BUILDER = Unit::Role::BUILDER.type;
 Type SCOUT   = Unit::Role::SCOUT.type;
 Type RAIDER  = Unit::Role::RAIDER.type;

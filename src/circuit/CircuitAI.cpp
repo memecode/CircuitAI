@@ -656,6 +656,11 @@ int CCircuitAI::Init(int skirmishAIId, const struct SSkirmishAICallback* sAICall
 		Release(RELEASE_SCRIPT);
 		return ERROR_INIT;
 	}
+
+	// Delay threat ranges initialization from allyTeam->Init()
+	// so cdef.SetRange() in AiMain() could make an effect.
+	allyTeam->InitThreatRanges(this);
+
 	for (auto& module : modules) {
 		if (!module->InitScript()) {
 			Release(RELEASE_SCRIPT);
@@ -1624,17 +1629,19 @@ CEnemyInfo* CCircuitAI::GetEnemyInfo(ICoreUnit::Id unitId) const
 
 bool CCircuitAI::UnitControl(CCircuitUnit* unit, bool isEnable)
 {
-	if ((unit != nullptr)/* && (unit->GetTask()->GetType() != IUnitTask::Type::NIL)*/) {
-		if (isEnable) {
-			// TODO: Check current task is CPlayerTask?
-			unit->GetTask()->RemoveAssignee(unit);
-		} else {
-			ITaskModule* mgr = unit->GetTask()->GetManager();
-			mgr->AssignTask(unit, new CPlayerTask(mgr));
-		}
-		return true;
+	if ((unit == nullptr)/* || (unit->GetTask()->GetType() == IUnitTask::Type::NIL)*/) {
+		return false;
 	}
-	return false;
+	if (isEnable) {
+		if (unit->GetTask()->GetType() != IUnitTask::Type::PLAYER) {
+			return false;
+		}
+		unit->GetTask()->RemoveAssignee(unit);
+	} else {
+		ITaskModule* mgr = unit->GetTask()->GetManager();
+		mgr->AssignTask(unit, new CPlayerTask(mgr));
+	}
+	return true;
 }
 
 void CCircuitAI::UpdateActions()

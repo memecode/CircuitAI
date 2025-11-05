@@ -238,6 +238,8 @@ public:
 	float GetAoe() const { return aoe; }
 	float GetPower() const { return power; }
 	float GetDefThreat() const { return defThreat; }
+	void SetRange(float range);
+	void SetRange(RangeType type, float range);
 	float GetMinRange() const { return minRange; }
 	float GetMaxRange(RangeType type) const { return maxRange[static_cast<RangeT>(type)]; }
 	float GetMaxRange() const { return maxRange[static_cast<RangeT>(maxRangeType)]; }
@@ -251,7 +253,7 @@ public:
 	int GetTargetCategoryDGun() const { return targetCategoryDGun; }
 	int GetNoChaseCategory() const { return noChaseCategory; }
 
-	void SetThreatKernel(float thrDmg);
+	void SetThreatKernel(float thrDmg);  // script API
 	void ModPower(float mod) { pwrMod *= mod; pwrDmg *= mod; power *= mod; }
 	void ModDefThreat(float mod) { defThrMod *= mod; defThrDmg *= mod; defThreat *= mod; }
 	void ModThreatMod(RoleT type, float mod) { thrDmgMod[type] *= mod; }

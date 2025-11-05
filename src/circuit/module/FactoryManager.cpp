@@ -481,6 +481,21 @@ void CFactoryManager::ReadConfig()
 			}
 		}
 
+		const Json::Value& range = behaviour["range"];
+		if (!range.isNull()) {
+			if (range.isNumeric()) {
+				cdef->SetRange(range.asFloat());
+			} else if (range.isArray()) {
+				cdef->SetRange(CCircuitDef::RangeType::AIR, range.get((unsigned)0, cdef->GetMaxRange(CCircuitDef::RangeType::AIR)).asFloat());
+				cdef->SetRange(CCircuitDef::RangeType::LAND, range.get((unsigned)1, cdef->GetMaxRange(CCircuitDef::RangeType::LAND)).asFloat());
+				cdef->SetRange(CCircuitDef::RangeType::WATER, range.get((unsigned)2, cdef->GetMaxRange(CCircuitDef::RangeType::WATER)).asFloat());
+			} else if (range.isObject()) {
+				cdef->SetRange(CCircuitDef::RangeType::AIR, range.get("air", cdef->GetMaxRange(CCircuitDef::RangeType::AIR)).asFloat());
+				cdef->SetRange(CCircuitDef::RangeType::LAND, range.get("land", cdef->GetMaxRange(CCircuitDef::RangeType::LAND)).asFloat());
+				cdef->SetRange(CCircuitDef::RangeType::WATER, range.get("water", cdef->GetMaxRange(CCircuitDef::RangeType::WATER)).asFloat());
+			}
+		}
+
 		cdef->SetIgnore(behaviour.get("ignore", cdef->IsIgnore()).asBool());
 
 		const Json::Value& mpOffset = behaviour["midposoffset"];

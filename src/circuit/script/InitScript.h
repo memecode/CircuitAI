@@ -58,7 +58,7 @@ public:
 
 	void RegisterMgr();
 	bool Init() override;
-	// callins
+	// script hooks
 	void Update();
 	void LuaMessage(const char* inData);
 	void UnitFinished(CCircuitUnit* unit);

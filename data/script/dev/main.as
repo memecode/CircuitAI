@@ -12,11 +12,21 @@ void AiMain()
 // 	aiTerrainMgr.SetAllyZoneRange(600);  // returns 576: (multiples of 128) div 2
 // 	aiEconomyMgr.reclConvertEff = 2.f;
 // 	aiEconomyMgr.reclEnergyEff = 20.f;
+//
 // 	for (Id defId = 1, count = ai.GetDefCount(); defId <= count; ++defId) {
 // 		CCircuitDef@ cdef = ai.GetCircuitDef(defId);
 // 		AiLog(cdef.GetName() + " | threat = " + cdef.threat + " | power = " + cdef.power +
 // 			" | air = " + cdef.GetAirThreat() + " | surf = " + cdef.GetSurfThreat() + " | water = " + cdef.GetWaterThreat());
 // 		cdef.SetThreatKernel((cdef.costM + cdef.costE * 0.02f) * 0.001f);
+//
+// 		if (ai.teamId == ai.GetLeadTeamId()) {
+// 			AiLog("minRange = " + cdef.minRange +
+// 				", maxRange = " + cdef.GetMaxRange() +
+// 				", maxRange[AIR] = " + cdef.GetMaxRange(Unit::RangeType::AIR) +
+// 				", maxRange[LAND] = " + cdef.GetMaxRange(Unit::RangeType::LAND) +
+// 				", maxRange[WATER] = " + cdef.GetMaxRange(Unit::RangeType::WATER));
+// 			cdef.SetRange(cdef.GetMaxRange() * 0.5f);
+// 		}
 // 	}
 
 	for (Id defId = 1, count = ai.GetDefCount(); defId <= count; ++defId) {
