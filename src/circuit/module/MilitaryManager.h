@@ -113,13 +113,6 @@ public:
 private:
 	virtual void DequeueTask(IUnitTask* task, bool done = false) override;
 
-    struct ThreatRangeScaling {
-        int enemyCountPerEnemyTeamToStartScaling;
-        int enemyCountPerEnemyTeamToEndScaling;
-        float endScaleValue;
-
-    } threatRangeScaling;
-
 public:
 	void MarkGuardUnit(CCircuitUnit* vip, CFGuardTask* task) {
 		guardTasks[vip] = task;
@@ -180,15 +173,13 @@ public:
 
 	void AddPointOfInterest(CEnemyInfo* enemy) { PointOfInterest(enemy, +3, -1); }
 	void DelPointOfInterest(CEnemyInfo* enemy) { PointOfInterest(enemy, -3, +1); }
-    
-    ThreatRangeScaling GetThreatRangeScaling() { return threatRangeScaling; };
 
 	// TODO: Create CMilitaryManager::CTargetManager and move all FindTarget variations there.
 	//       CMilitaryManager must be responsible for target selection.
 	CEnemyInfo* FindBCombatTarget(CCircuitUnit* unit, const springai::AIFloat3& pos,
 								  float powerMod, bool isTest);
 
-    float GetRangeUnitCountCompensatorScale();
+	float GetRangeUnitCountCompensatorScale();
 
 private:
 	virtual IUnitTask* DefaultMakeTask(CCircuitUnit* unit) override;
@@ -256,6 +247,14 @@ private:
 		float min;
 		float len;
 	} attackMod, defenceMod;
+
+	struct SThreatRangeScaling {
+		int enemyCountPerEnemyTeamToStartScaling = 0;
+		int enemyCountPerEnemyTeamToEndScaling = 1;
+		float endScaleValue = 1.f;
+		float scale = 1.f;  // cache per frame
+		int frame = -TEAM_SLOWUPDATE_RATE - 1;
+	} threatRangeScaling;
 
 	unsigned int preventCount = 0;
 	float amountFactor = 0.f;

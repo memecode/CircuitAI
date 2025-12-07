@@ -7,6 +7,7 @@
 
 #include "map/ThreatMap.h"
 #include "map/MapManager.h"
+#include "module/MilitaryManager.h"  // GetRangeUnitCountCompensatorScale
 #include "scheduler/Scheduler.h"
 #include "setup/SetupManager.h"
 #include "terrain/TerrainManager.h"
@@ -15,7 +16,6 @@
 #include "util/Utils.h"
 #include "util/Profiler.h"
 #include "json/json.h"
-#include "module/MilitaryManager.h"
 
 //#undef NDEBUG
 #include <cassert>
@@ -154,6 +154,7 @@ void CThreatMap::EnqueueUpdate()
 
 	CEnemyManager* enemyMgr = circuit->GetEnemyManager();
 	CScheduler* scheduler = circuit->GetScheduler().get();
+	rangeScale = circuit->GetMilitaryManager()->GetRangeUnitCountCompensatorScale();
 	scheduler->RunPriorityJob(CScheduler::WorkJob(&CThreatMap::Update, this, enemyMgr, scheduler));
 }
 
@@ -419,7 +420,7 @@ void CThreatMap::AddEnemyAmphConst(const float threatSurf, const float threatWat
 	r = e.GetRange(CCircuitDef::ThreatType::WATER);
 	const int rangeWater = (r > 0) ? r + slack : 0;
 	const int rangeWaterSq = (r > 0) ? SQUARE(rangeWater) : -1;
-	const int range = std::max(rangeSurf, rangeWater) * manager->GetCircuit()->GetMilitaryManager()->GetRangeUnitCountCompensatorScale();
+	const int range = std::max(rangeSurf, rangeWater) * rangeScale;
 	const std::vector<SSector>& sector = areaData->sector;
 
 	const int beginX = std::max(int(posx - range + 1),      0);
@@ -469,7 +470,7 @@ void CThreatMap::AddEnemyAmphGradient(const float threatSurf, const float threat
 	r = e.GetRange(CCircuitDef::ThreatType::WATER);
 	const int rangeWater = (r > 0) ? r + slack : 0;
 	const int rangeWaterSq = (r > 0) ? SQUARE(rangeWater) : -1;
-	const int range = std::max(rangeLand, rangeWater) * manager->GetCircuit()->GetMilitaryManager()->GetRangeUnitCountCompensatorScale();
+	const int range = std::max(rangeLand, rangeWater) * rangeScale;
 	const std::vector<SSector>& sector = areaData->sector;
 
 	const int beginX = std::max(int(posx - range + 1),      0);

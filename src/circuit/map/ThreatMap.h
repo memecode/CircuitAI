@@ -59,7 +59,6 @@ public:
 	float GetUnitPower(CCircuitUnit* unit) const;
 	int GetSquareSize() const { return squareSize; }
 	int GetMapSize() const { return mapSize; }
-    float GetRangeUnitCountCompensatorScale();
 
 private:
 	void ApplyRange(CCircuitDef* cdef);
@@ -140,6 +139,8 @@ private:
 	float* cloakThreat;
 	float* shieldArray;
 	float* threatArray;  // current threat array for multiple GetThreatAt() calls
+
+	float rangeScale = 1.f;  // thread var
 
 #ifdef DEBUG_VIS
 private:

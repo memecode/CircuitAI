@@ -365,10 +365,10 @@ void CMilitaryManager::ReadConfig()
 	defenceMod.min = qthrDef.get((unsigned)0, 1.f).asFloat();
 	defenceMod.len = qthrDef.get((unsigned)1, 1.f).asFloat() - defenceMod.min;
 
-    const Json::Value& adaptive_threat_range = root["adaptive_threat_range"];
+	const Json::Value& adaptive_threat_range = root["adaptive_threat_range"];
 	threatRangeScaling.enemyCountPerEnemyTeamToStartScaling = adaptive_threat_range.get("enemy_count_per_team_to_start_scaling", 50).asInt();
 	threatRangeScaling.enemyCountPerEnemyTeamToEndScaling = adaptive_threat_range.get("enemy_count_per_team_to_end_scaling", 300).asInt();
-	threatRangeScaling.endScaleValue = adaptive_threat_range.get("end_scale_value", 0.4f).asFloat();
+	threatRangeScaling.endScaleValue = adaptive_threat_range.get("end_scale_value", -1.0f).asFloat();
 
 	const Json::Value& porc = root["porcupine"];
 	preventCount = porc.get("prevent", 1).asUInt();
@@ -1337,7 +1337,7 @@ float CMilitaryManager::ClampMobileCostRatio() const
 
 void CMilitaryManager::UpdateDefenceTasks()
 {
-    /*
+	/*
 	 * Stockpile
 	 */
 	for (CCircuitUnit* unit : stockpilers) {
@@ -1617,6 +1617,22 @@ CEnemyInfo* CMilitaryManager::FindBCombatTarget(CCircuitUnit* unit, const AIFloa
 	return bestTarget;
 }
 
+float CMilitaryManager::GetRangeUnitCountCompensatorScale()
+{
+	if (threatRangeScaling.frame + TEAM_SLOWUPDATE_RATE < circuit->GetLastFrame()) {
+		threatRangeScaling.frame = circuit->GetLastFrame();
+		const int enemyTeamSize = circuit->GetEnemyTeamSize();
+		const int totalEnemies = circuit->GetEnemyInfos().size();
+		const int enemyCountMinToStartScaling = threatRangeScaling.enemyCountPerEnemyTeamToStartScaling * enemyTeamSize;
+		const int enemyCountForMaxScale = threatRangeScaling.enemyCountPerEnemyTeamToEndScaling * enemyTeamSize;
+		const float rateAdjPerUnit = 1.0f / (float)(enemyCountForMaxScale - enemyCountMinToStartScaling);
+		threatRangeScaling.scale = std::min(1.0f, std::max(threatRangeScaling.endScaleValue, 1.0f - (totalEnemies - enemyCountMinToStartScaling) * rateAdjPerUnit));
+//		circuit->LOG("getRangeUnitCountCompensatorScale: %f, totalEnemies %i, minEnemyCountBeforeScaling %i, rateAdjPerUnit %f",
+//				threatRangeScaling.scale, totalEnemies, enemyCountMinToStartScaling, rateAdjPerUnit);
+	}
+	return threatRangeScaling.scale;
+}
+
 IUnitTask* CMilitaryManager::DefaultMakeTask(CCircuitUnit* unit)
 {
 	// FIXME: Make central task assignment system.
@@ -1824,17 +1840,6 @@ CDefenceData::SDefPoint* CMilitaryManager::FindClosestDefPoint(int cluster, cons
 		}
 	}
 	return closestPoint;
-}
-
-float CMilitaryManager::GetRangeUnitCountCompensatorScale() {
-    CMilitaryManager* milman = circuit->GetMilitaryManager();
-    const int totalEnemies = circuit->GetEnemyInfos().size();
-    const int enemyCountMinToStartScaling = milman->GetThreatRangeScaling().enemyCountPerEnemyTeamToStartScaling * circuit->GetEnemyTeamSize();
-    const int enemyCountForMaxScale = milman->GetThreatRangeScaling().enemyCountPerEnemyTeamToEndScaling * circuit->GetEnemyTeamSize();
-    const float rateAdjPerUnit = 1.0f / (float)(enemyCountForMaxScale - enemyCountMinToStartScaling);
-    float scale = std::min(1.0f, std::max(milman->GetThreatRangeScaling().endScaleValue, 1.0f - (totalEnemies - enemyCountMinToStartScaling) * rateAdjPerUnit));
-    //circuit->LOG("getRangeUnitCountCompensatorScale: %f, totalEnemies %i, minEnemyCountBeforeScaling %i, rateAdjPerUnit %f", scale, totalEnemies, enemyCountMinToStartScaling, rateAdjPerUnit);
-    return scale;
 }
 
 } // namespace circuit

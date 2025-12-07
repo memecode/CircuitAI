@@ -103,6 +103,7 @@ private:
 //	float* vulnerability;
 //	float* featureInfl;
 
+	float rangeScale = 1.f;  // thread var
 	float defRadius = 0.f;
 
 #ifdef DEBUG_VIS

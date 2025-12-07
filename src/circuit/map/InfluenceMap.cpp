@@ -8,6 +8,7 @@
 #include "map/InfluenceMap.h"
 #include "map/MapManager.h"
 #include "module/EconomyManager.h"
+#include "module/MilitaryManager.h"  // GetRangeUnitCountCompensatorScale
 #include "scheduler/Scheduler.h"
 #include "setup/SetupManager.h"
 #include "terrain/TerrainManager.h"
@@ -22,7 +23,6 @@
 //#include "Cheats.h"
 #include "Feature.h"
 #include "FeatureDef.h"
-#include "module/MilitaryManager.h"
 
 namespace circuit {
 
@@ -95,6 +95,7 @@ void CInfluenceMap::EnqueueUpdate()
 
 	CCircuitAI* circuit = manager->GetCircuit();
 	CEnemyManager* enemyMgr = circuit->GetEnemyManager();
+	rangeScale = circuit->GetMilitaryManager()->GetRangeUnitCountCompensatorScale();
 	circuit->GetScheduler()->RunPriorityJob(CScheduler::WorkJob(&CInfluenceMap::Update, this, enemyMgr));
 }
 
@@ -367,12 +368,13 @@ void CInfluenceMap::AddEnemy(const SEnemyData& e)
 
 	const float val = e.influence;
 	// FIXME: GetInfluenceRange: for statics it's just range; mobile should account for speed
-	const int range = (e.cdef == nullptr)
+	int range = (e.cdef == nullptr)
 			? e.GetRange(CCircuitDef::ThreatType::SURF)
 			: e.cdef->IsMobile()
 					? e.GetRange(CCircuitDef::ThreatType::SURF)
 					: e.GetRange(CCircuitDef::ThreatType::SURF) / 2;
-	const int rangeSq = SQUARE(range) * manager->GetCircuit()->GetMilitaryManager()->GetRangeUnitCountCompensatorScale();
+	range *= rangeScale;
+	const int rangeSq = SQUARE(range);
 
 	const int beginX = std::max(int(posx - range + 1),       0);
 	const int endX   = std::min(int(posx + range    ),  width);
