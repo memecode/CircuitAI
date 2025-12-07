@@ -27,6 +27,7 @@
 #include "json/json.h"
 
 #include "spring/SpringCallback.h"
+#include "spring/SpringMap.h"
 
 #include "AIFloat3.h"
 #include "AISCommands.h"
@@ -519,36 +520,35 @@ void CFactoryManager::ReadConfig()
 	const bool warnProb = root.get("warn_probability", true).asBool();
 	CTerrainManager* terrainMgr = circuit->GetTerrainManager();
 	const Json::Value& factories = root["factory"];
+	float minSpeed = std::numeric_limits<float>::max();
+	float maxSpeed = 0.f;
 	for (const std::string& fac : factories.getMemberNames()) {
 		CCircuitDef* cdef = circuit->GetCircuitDef(fac.c_str());
 		if (cdef == nullptr) {
 			circuit->LOG("CONFIG %s: has unknown UnitDef '%s'", cfgName.c_str(), fac.c_str());
 			continue;
 		}
+		SImmobileType::Id itId = cdef->GetImmobileId();
+		if (itId < 0) {  // didn't identify proper type?
+			circuit->LOG("CONFIG %s: '%s' has unknown immobile type", cfgName.c_str(), fac.c_str());
+			continue;
+		}
 
 		const Json::Value& factory = factories[fac];
 		SFactoryDef facDef;
 
-		// FIXME: used to create tasks on Event (like DefendTask)
-//		const std::unordered_set<CCircuitDef::Id>& options = cdef->GetBuildOptions();
-//		const CCircuitDef::RoleT roleSize = roleNames.size();
-//		facDef.roleDefs.resize(roleSize, nullptr);
-//		for (CCircuitDef::RoleT type = 0; type < roleSize; ++type) {
-//			float minCost = std::numeric_limits<float>::max();
-//			CCircuitDef* rdef = nullptr;
-//			const std::set<CCircuitDef::Id>& defIds = roleDefs[type];
-//			for (const CCircuitDef::Id bid : defIds) {
-//				if (options.find(bid) == options.end()) {
-//					continue;
-//				}
-//				CCircuitDef* tdef = circuit->GetCircuitDef(bid);
-//				if (minCost > tdef->GetCostM()) {
-//					minCost = tdef->GetCostM();
-//					rdef = tdef;
-//				}
-//			}
-//			facDef.roleDefs[type] = rdef;
-//		}
+		// TODO: Replace importance with proper terrain analysis (size, hardness, unit's power, speed)
+		const Json::Value& importance = factory["importance"];
+		if (importance.isNull()) {
+			facDef.startImp = 1.0f;
+			facDef.switchImp = 1.0f;
+		} else {
+			facDef.startImp = importance.get((unsigned)0, 1.0f).asFloat();
+			facDef.switchImp = importance.get((unsigned)1, 1.0f).asFloat();
+			// FIXME: DEBUG Silly t1 detection
+			facDef.isT1 = (facDef.switchImp <= .0f);
+			// FIXME: DEBUG
+		}
 
 		facDef.isRequireEnergy = factory.get("require_energy", false).asBool();
 
@@ -563,6 +563,8 @@ void CFactoryManager::ReadConfig()
 		float landSize = std::numeric_limits<float>::max();
 		float waterSize = std::numeric_limits<float>::max();
 		std::vector<unsigned> trueIndex;
+		unsigned itemsAmount = 0;
+		float avgSpeed = 0.f;
 
 		for (unsigned i = 0; i < items.size(); ++i) {
 			CCircuitDef* udef = circuit->GetCircuitDef(items[i].asCString());
@@ -599,12 +601,22 @@ void CFactoryManager::ReadConfig()
 				waterSize = area->percentOfMap;
 				waterDef = udef;
 			}
+
+			avgSpeed += udef->GetSpeed();
+			++itemsAmount;
 		}
 		if (facDef.buildDefs.empty()) {
 			continue;  // ignore empty factory
 		}
 		facDef.landDef = landDef;
 		facDef.waterDef = waterDef;
+
+		if (itemsAmount > 0) {
+			avgSpeed /= itemsAmount;
+		}
+		minSpeed = std::min(minSpeed, avgSpeed);
+		maxSpeed = std::max(maxSpeed, avgSpeed);
+		facDef.mapSpeedPerc = avgSpeed;
 
 		auto fillProbs = [this, &cfgName, &facDef, &fac, &factory, &trueIndex, warnProb](unsigned i, const char* type, SFactoryDef::Tiers& tiers) {
 			const Json::Value& tierType = factory[type];
@@ -662,6 +674,28 @@ void CFactoryManager::ReadConfig()
 
 		factoryDefs[cdef->GetId()] = facDef;
 	}
+
+	const Json::Value& select = root["select"];
+	const Json::Value& offset = select["offset"];
+	const Json::Value& speed = select["speed"];
+	const Json::Value& map = select["map"];
+	airMapPerc = select.get("air_map", 80.0f).asFloat();
+	minOffset = offset.get((unsigned)0, -20.0f).asFloat();
+	const float maxOffset = offset.get((unsigned)1, 20.0f).asFloat();
+	lenOffset = maxOffset - minOffset;
+	const float minSpPerc = speed.get((unsigned)0, 0.0f).asFloat();
+	const float maxSpPerc = speed.get((unsigned)1, 40.0f).asFloat();
+	const float minMap = map.get((unsigned)0, 8.0f).asFloat();
+	const float maxMap = map.get((unsigned)1, 24.0f).asFloat();
+	const float minMapSp = SQUARE(minMap) * minSpeed;
+	const float mapSize = (circuit->GetMap()->GetWidth() / 64) * (circuit->GetMap()->GetHeight() / 64);
+	const float speedFactor = (maxSpPerc - minSpPerc) / (SQUARE(maxMap) * maxSpeed - minMapSp);
+	for (auto& kv : factoryDefs) {
+		float avgSpeed = kv.second.mapSpeedPerc;
+		kv.second.mapSpeedPerc = speedFactor * (mapSize * avgSpeed - minMapSp) + minSpPerc;
+	}
+
+	noAirNum = select.get("no_air", 2).asUInt();
 
 	bpRatio = root["economy"].get("buildpower", 1.f).asFloat();
 	reWeight = root["response"].get("_weight_", .5f).asFloat();
@@ -881,7 +915,7 @@ CCircuitUnit* CFactoryManager::GetClosestFactory(const AIFloat3& position)
 	float minSqDist = std::numeric_limits<float>::max();
 	const int frame = circuit->GetLastFrame();
 	for (SFactory& fac : factories) {
-		if (factoryData->IsT1Factory(fac.unit->GetCircuitDef())) {
+		if (IsT1Factory(fac.unit->GetCircuitDef())) {
 			continue;
 		}
 		SArea* area = fac.unit->GetArea();
@@ -898,7 +932,7 @@ CCircuitUnit* CFactoryManager::GetClosestFactory(const AIFloat3& position)
 	// FIXME: DEBUG lazy t1 factory check
 	if (factory == nullptr) {
 		for (SFactory& fac : factories) {
-			if (!factoryData->IsT1Factory(fac.unit->GetCircuitDef())) {
+			if (!IsT1Factory(fac.unit->GetCircuitDef())) {
 				continue;
 			}
 			SArea* area = fac.unit->GetArea();
@@ -1069,6 +1103,15 @@ void CFactoryManager::DelFactory(const CCircuitDef* cdef)
 	factoryData->DelFactory(cdef);
 }
 
+bool CFactoryManager::IsT1Factory(const CCircuitDef* cdef)
+{
+	auto it = factoryDefs.find(cdef->GetId());
+	if (it != factoryDefs.end()) {
+		return it->second.isT1;
+	}
+	return false;
+}
+
 CCircuitDef* CFactoryManager::GetRoleDef(const CCircuitDef* facDef, CCircuitDef::RoleT role) const
 {
 	auto it = factoryDefs.find(facDef->GetId());
@@ -1216,7 +1259,7 @@ void CFactoryManager::EnableFactory(CCircuitUnit* unit)
 		factories.emplace_back(unit, nanos, nanoSize, 0, nullptr, 0.f, 0.f, 0.f, 0.f);
 	}
 
-	if (!factoryData->IsT1Factory(unit->GetCircuitDef())) {
+	if (!IsT1Factory(unit->GetCircuitDef())) {
 		noT1FacCount++;
 	}
 
@@ -1327,7 +1370,7 @@ void CFactoryManager::DisableFactory(CCircuitUnit* unit)
 		circuit->GetSetupManager()->SetBasePos(pos);
 	}
 
-	if (!factoryData->IsT1Factory(unit->GetCircuitDef())) {
+	if (!IsT1Factory(unit->GetCircuitDef())) {
 		noT1FacCount--;
 	}
 
@@ -1377,7 +1420,7 @@ IUnitTask* CFactoryManager::CreateFactoryTask(CCircuitUnit* unit)
 		}
 	}
 
-	const bool isActive = (noT1FacCount <= 0) || !factoryData->IsT1Factory(unit->GetCircuitDef());
+	const bool isActive = (noT1FacCount <= 0) || !IsT1Factory(unit->GetCircuitDef());
 
 	IUnitTask* task = UpdateBuildPower(unit, isActive);
 	if (task != nullptr) {

@@ -21,34 +21,17 @@ public:
 	CFactoryData();
 	virtual ~CFactoryData();
 
-	void InitFactoryDefs(CCircuitAI *circuit);
-
 	CCircuitDef* GetFactoryToBuild(CCircuitAI* circuit, springai::AIFloat3 position = -RgtVector,
 								   bool isStart = false, bool isReset = false);
 	void AddFactory(const CCircuitDef* cdef);
 	void DelFactory(const CCircuitDef* cdef);
 
-	bool IsT1Factory(const CCircuitDef* cdef);
-
 private:
-	void ReadConfig(CCircuitAI* circuit);
-
 	unsigned int choiceNum;
-	unsigned int noAirNum = 0;
 	struct SFactory {
-		CCircuitDef::Id id;
-		float startImp;  // importance[0]
-		float switchImp;  // importance[1]
-		int count;
-		float mapSpeedPerc;
-		bool isT1;  // FIXME: DEBUG Silly t1 detection
+		int count = 0;
 	};
-	float airMapPerc = 0.f;
-	float minOffset = 0.f;
-	float lenOffset = 0.f;
 	std::unordered_map<CCircuitDef::Id, SFactory> allFactories;
-
-//	std::unordered_map<CCircuitDef::Id, std::unordered_set<CCircuitDef::Id>> factoryDefs;  // builder: set<factory>
 };
 
 } // namespace circuit

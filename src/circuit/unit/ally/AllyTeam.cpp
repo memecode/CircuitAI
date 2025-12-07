@@ -94,7 +94,6 @@ void CAllyTeam::Init(CCircuitAI* circuit, float decloakRadius)
 	defence->ReadConfig(circuit);
 	pathfinder = std::make_shared<CPathFinder>(&circuit->GetGameAttribute()->GetTerrainData(), circuit->GetScheduler()->GetMaxWorkThreads());
 	factoryData = std::make_shared<CFactoryData>();
-	factoryData->InitFactoryDefs(circuit);
 
 	releaseTask = CScheduler::GameJob(&CAllyTeam::DelegateAuthority, this);
 	circuit->GetScheduler()->RunOnRelease(releaseTask);

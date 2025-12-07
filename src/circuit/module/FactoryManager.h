@@ -88,6 +88,38 @@ public:
 	struct SSideInfo {
 		CCircuitDef* assistDef;
 	};
+	struct SFactoryDef {
+		using Tiers = std::map<unsigned, std::vector<float>>;  // tier: probs
+
+		SFactoryDef()
+			: startImp(0.f)
+			, switchImp(0.f)
+			, mapSpeedPerc(0.f)
+			, isT1(false)
+			, landDef(nullptr)
+			, waterDef(nullptr)
+			, isRequireEnergy(false)
+			, nanoCount(0)
+		{}
+
+		// >>> FactoryData ---- BEGIN
+		float startImp;  // importance[0]
+		float switchImp;  // importance[1]
+		float mapSpeedPerc;
+		bool isT1;  // FIXME: DEBUG Silly t1 detection
+		// <<< FactoryData ---- END
+
+		std::vector<CCircuitDef*> buildDefs;
+		Tiers airTiers;
+		Tiers landTiers;
+		Tiers waterTiers;
+		CCircuitDef* landDef;
+		CCircuitDef* waterDef;
+		std::vector<float> incomes;
+		bool isRequireEnergy;
+		unsigned int nanoCount;
+	};
+	using FactoryDefs = std::unordered_map<CCircuitDef::Id, SFactoryDef>;
 
 	CFactoryManager(CCircuitAI* circuit);
 	virtual ~CFactoryManager();
@@ -146,6 +178,7 @@ public:
 								   bool isStart = false, bool isReset = false);
 	void AddFactory(const CCircuitDef* cdef);
 	void DelFactory(const CCircuitDef* cdef);
+	bool IsT1Factory(const CCircuitDef* cdef);
 	CCircuitDef* GetRoleDef(const CCircuitDef* facDef, CCircuitDef::RoleT role) const;
 	CCircuitDef* GetLandDef(const CCircuitDef* facDef) const;
 	CCircuitDef* GetWaterDef(const CCircuitDef* facDef) const;
@@ -154,6 +187,12 @@ public:
 
 	float GetAssistSpeed() const { return GetSideInfo().assistDef->GetBuildSpeed(); }
 	float GetAssistRange() const { return GetSideInfo().assistDef->GetBuildDistance(); }
+
+	const FactoryDefs& GetFactoryDefs() const { return factoryDefs; }
+	unsigned int GetNoAirNum() const { return noAirNum; }
+	float GetAirMapPerc() const { return airMapPerc; }
+	float GetMinOffset() const { return minOffset; }
+	float GetLenOffset() const { return lenOffset; }
 
 private:
 	CCircuitDef* DefaultGetFactoryToBuild(const springai::AIFloat3& position, bool isStart, bool isReset);
@@ -218,27 +257,13 @@ private:
 	int lastSwitchFrame;
 	int noT1FacCount;
 
-	struct SFactoryDef {
-		using Tiers = std::map<unsigned, std::vector<float>>;  // tier: probs
-
-		SFactoryDef()
-			: landDef(nullptr)
-			, waterDef(nullptr)
-			, isRequireEnergy(false)
-			, nanoCount(0)
-		{}
-
-		std::vector<CCircuitDef*> buildDefs;
-		Tiers airTiers;
-		Tiers landTiers;
-		Tiers waterTiers;
-		CCircuitDef* landDef;
-		CCircuitDef* waterDef;
-		std::vector<float> incomes;
-		bool isRequireEnergy;
-		unsigned int nanoCount;
-	};
-	std::unordered_map<CCircuitDef::Id, SFactoryDef> factoryDefs;
+	FactoryDefs factoryDefs;
+	// >>> FactoryData ---- BEGIN
+	unsigned int noAirNum = 0;
+	float airMapPerc = 0.f;
+	float minOffset = 0.f;
+	float lenOffset = 0.f;
+	// <<< FactoryData ---- END
 	float bpRatio;
 	float reWeight;
 
