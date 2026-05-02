@@ -5,6 +5,9 @@
  *      Author: rlcevg
  */
 
+#include <algorithm>
+#include <random>
+
 #include "setup/SetupManager.h"
 #include "setup/SetupData.h"
 #include "module/EconomyManager.h"  // only for GetMexDef
@@ -189,8 +192,9 @@ void CSetupManager::PickStartPos(StartPosType type)
 					c.distDivIncome = center.distance(cl.position) / income;
 					validClusters.push_back(std::make_pair(kv.first, c));
 				}
+
 				std::random_device rd;
-				std::mt19937 g(rd());
+    			std::mt19937 g(rd());
 				std::shuffle(validClusters.begin(), validClusters.end(), g);
 
 				auto cmp = [](const std::pair<int, SCluster>& a, const std::pair<int, SCluster>& b) {

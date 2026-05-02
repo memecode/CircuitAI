@@ -8,6 +8,8 @@
 #ifndef SRC_CIRCUIT_UTIL_AVAILLIST_H_
 #define SRC_CIRCUIT_UTIL_AVAILLIST_H_
 
+#include <iterator>
+
 #include "unit/CircuitDef.h"
 
 #include <set>
