@@ -88,15 +88,11 @@ namespace lemon {
       Item it;
       for (nf->first(it); it != INVALID; nf->next(it)) {
         int id = nf->id(it);;
-<<<<<<< Updated upstream
 #if ((defined(_MSVC_LANG) && _MSVC_LANG >= 202002L) || __cplusplus >= 202002L)
         std::allocator_traits<Allocator>::construct(allocator, &(values[id]), Value());
 #else
         allocator.construct(&(values[id]), Value());
 #endif
-=======
-        std::allocator_traits<Allocator>::construct(allocator, &(values[id]), Value());
->>>>>>> Stashed changes
       }
     }
 
@@ -234,7 +230,6 @@ namespace lemon {
         for (nf->first(it); it != INVALID; nf->next(it)) {
           int jd = nf->id(it);;
           if (id != jd) {
-<<<<<<< Updated upstream
 #if ((defined(_MSVC_LANG) && _MSVC_LANG >= 202002L) || __cplusplus >= 202002L)
             std::allocator_traits<Allocator>::construct(allocator, &(new_values[jd]), values[jd]);
             std::allocator_traits<Allocator>::destroy(allocator, &(values[jd]));
@@ -242,25 +237,17 @@ namespace lemon {
             allocator.construct(&(new_values[jd]), values[jd]);
             allocator.destroy(&(values[jd]));
 #endif
-=======
-            std::allocator_traits<Allocator>::construct(allocator, &(new_values[jd]), values[jd]);
-            std::allocator_traits<Allocator>::destroy(allocator, &(values[jd]));
->>>>>>> Stashed changes
           }
         }
         if (capacity != 0) allocator.deallocate(values, capacity);
         values = new_values;
         capacity = new_capacity;
       }
-<<<<<<< Updated upstream
 #if ((defined(_MSVC_LANG) && _MSVC_LANG >= 202002L) || __cplusplus >= 202002L)
       std::allocator_traits<Allocator>::construct(allocator, &(values[id]), Value());
 #else
       allocator.construct(&(values[id]), Value());
 #endif
-=======
-      std::allocator_traits<Allocator>::construct(allocator, &(values[id]), Value());
->>>>>>> Stashed changes
     }
 
     // \brief Adds more new keys to the map.
