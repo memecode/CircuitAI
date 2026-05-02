@@ -9,7 +9,8 @@ set(additionalSources      ${additionalSources} ${CMAKE_SOURCE_DIR}/rts/System/M
 if (WIN32)  # spring::condition_variable_any requirement
 	set(additionalSources  ${additionalSources} ${CMAKE_SOURCE_DIR}/rts/System/Platform/Win/CriticalSection.cpp)
 elseif (APPLE)
-	set(additionalSources  ${additionalSources} ${CMAKE_SOURCE_DIR}/rts/System/Platform/Mac/Signal.cpp)
+	set(additionalSources  ${additionalSources} ${CMAKE_SOURCE_DIR}/rts/System/Platform/Mac/Signal.cpp
+												${CMAKE_CURRENT_SOURCE_DIR}/src/lib/angelscript/source/as_callfunc_arm64_xcode.S)
 else ()
 	set(additionalSources  ${additionalSources} ${CMAKE_SOURCE_DIR}/rts/System/Platform/Linux/Futex.cpp)
 endif ()
